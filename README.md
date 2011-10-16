@@ -1,24 +1,31 @@
 Machine Learning (Fall 2011) - Homework 1
 =========================================
 
+Implementation
+--------------
+
+The Perceptron, LinearRegression and LogisticRegression algorithms are implemented
+in `linear/linear.py` as subclasses of the abstract LinearClassifier class.  The
+LinearClassifier does the heavy lifting for training and testing of the algorithms
+and the subclasses provide their own `loss_function` and `delta` methods. Not
+surprisingly, `loss_function` returns the value of the loss function given a 
+particular label and x vector.  `delta` return the gradient of `loss_function`,
+__divided by x__ since the x vector factors out of the update term in stochastic
+gradient descent in the same way for each of these algorithms.  The LinearRegression
+object has one extra method `solve` that uses the direct solution to solve the 
+system.
+
+The code to read in the dataset is in `dataset/dataset.py` and it includes all the
+required helper functions (e.g. `normalize`, `shuffle`, etc.).  This module also
+includes a `LinearlySeperableDataset` that generates a truly linearly seperable
+mock dataset to run tests on.
+
+Experiments with `spambase`
+---------------------------
+
+
 Questions
 ---------
-
-1 - implement:
-    a - the perceptron learning algorithm
-    b - linear regression with square loss 
-        trained with stochastic gradient descent
-    c - linear regression with square loss trained
-        by direct solution of a linear system.
-    d - the logistic regression algorithm trained 
-        with stochastic gradient descent
-
-
-    REMEMBER TO TAKE CARE OF THE BIAS PARAMETER!!!
-    The bias is implemented a separate parameter,
-    don't forget to update it in your code.
-
-     ==> include your code as attachment.
 
 2 - Experiments with the Spambase dataset
 
