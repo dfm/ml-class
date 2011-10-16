@@ -1,8 +1,8 @@
 # Machine Learning (Fall 2011) - Homework 1
 
-### By: Daniel Foreman-Mackey (danfm@nyu.edu)
+### By: Daniel Foreman-Mackey (<danfm@nyu.edu>)
 
-##Implementation
+## Implementation
 
 The Perceptron, LinearRegression and LogisticRegression algorithms are implemented
 in `linear/linear.py` as subclasses of the abstract LinearClassifier class.  The
@@ -23,8 +23,7 @@ this dataset, run:
 
     python hw1.py --test --perceptron
 
-Experiments with _spambase_
----------------------------
+## Experiments with _spambase_
 
 To test the algorithms on the spambase dataset with 1000 training samples, you 
 can just run
@@ -33,6 +32,10 @@ can just run
 
 If you add the `--verbose` option, it will output the test and training error and
 loss at each iteration of the training phase.
+
+### Hyperparameters
+
+__TODO__: find the best hyperparams!
 
 Questions
 ---------

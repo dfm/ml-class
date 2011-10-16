@@ -66,7 +66,7 @@ def hw1():
         machine.solve()
 
     if args.logistic:
-        machine = LogisticRegression(data, eta=0.01, alpha=0.1)
+        machine = LogisticRegression(data, eta=0.01, alpha=0.0)
         machine.train(verbose=args.verbose)
 
     if args.test:
