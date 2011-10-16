@@ -9,11 +9,19 @@ All original code by Daniel Foreman-Mackey
 
 from __future__ import division
 
-__all__ = ['LinearClassifier']
+__all__ = ['Perceptron', 'LinearRegression', 'LogisticRegression']
 
 import numpy as np
 import scipy as sp
 import scipy.linalg
+
+# Define a table layout
+header = "Iter%11s%11s%11s%11s%11s%11s"%\
+            ("tr-loss","tr-error","test-loss", "test-error", "full-loss",
+                    "full-error")
+layout  = "%(train-loss)10.4f %(train-error)10.4f "
+layout += "%(test-loss)10.4f %(test-error)10.4f "
+layout += "%(full-loss)10.4f %(full-error)10.4f"
 
 class LinearClassifier(object):
     """
@@ -35,7 +43,8 @@ class LinearClassifier(object):
 
     def run(self, sample):
         self._sum = self._bias + np.dot(self._weights, sample)
-        return 1 if self.loss(1) < self.loss(-1) else -1
+        loss = (self.loss(1), self.loss(-1))
+        return 1 if loss[0] < loss[1] else -1
 
     def loss_function(self, label):
         raise NotImplementedError()
@@ -55,22 +64,56 @@ class LinearClassifier(object):
         self._weights += delta * sample - a * self._weights - b
         self._bias    += delta - a - b
 
-    def train(self, niter=1):
+    def training_sweep(self):
         """
         Train the classifier on a dataset using stochastic gradient
 
-        Parameters
-        ----------
-        niter : int, optional
-            The number of iterations to sweep over the full training set
-            (default: 1)
-
         """
         train_in, train_out = self._dataset.training_set
-        for iteration in range(niter):
-            for i in range(self._dataset.size_train):
-                self.run(train_in[i])
-                self.train_sample(train_in[i], train_out[i])
+        for i in range(self._dataset.size_train):
+            self.run(train_in[i])
+            self.train_sample(train_in[i], train_out[i])
+
+    def train(self, maxiter=50, tol=1.25e-3, verbose=True):
+        self.training_sweep()
+
+        machine_name = type(self).__name__
+        print "Optimizing %s" % machine_name
+        print "========== "+"="*len(machine_name)
+        print header
+
+        if verbose:
+            stats = self.stats()
+            loss0 = stats['train-loss']
+            print "   0",
+            print layout%stats
+
+        else:
+            loss0, error0 = self.test(on_training_set=True)
+
+        for i in xrange(maxiter):
+            self.training_sweep()
+            if verbose:
+                stats = self.stats()
+                loss = stats['train-loss']
+                print "%4d"%(i+1),
+                print layout%stats
+                
+            else:
+                loss,error = self.test(on_training_set=True)
+
+            # check for convergence
+            if i > 2 and np.abs(loss-loss0) < tol:
+                break
+            loss0 = loss
+        else:
+            print "Warning: convergence criterion wasn't met after %d iterations"\
+                    %maxiter
+
+        if not verbose:
+            stats = self.stats()
+            print "%4d"%(i+1),
+            print layout%stats
 
     def test_sample(self, sample, label):
         """
@@ -196,6 +239,11 @@ class LinearRegression(LinearClassifier):
         w = sp.linalg.lu_solve(sp.linalg.lu_factor(A), np.dot(x.T, t))
         self._weights = w[1:]
         self._bias = w[0]
+        print "Direct solution of LinearRegression"
+        print "====== ======== == ================"
+        print header
+        print "   0",
+        print layout%(self.stats())
 
 class LogisticRegression(LinearClassifier):
     """
