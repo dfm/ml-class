@@ -19,7 +19,7 @@ def hw1():
     parser = argparse.ArgumentParser()
     parser.add_argument('--ntrain', help="Number of training samples",
             default=1000)
-    parser.add_argument('-t', '--tests',
+    parser.add_argument('-t', '--test',
             help='Run some tests on a mock dataset',
             action='store_true')
     parser.add_argument('-p', '--perceptron',
@@ -40,7 +40,7 @@ def hw1():
     args = parser.parse_args()
 
     # Run some tests on a truely linearly seperable system
-    if args.tests:
+    if args.test:
         import numpy as np
         import matplotlib
         matplotlib.use('Agg')
@@ -69,7 +69,7 @@ def hw1():
         machine = LogisticRegression(data, eta=0.01, alpha=0.1)
         machine.train(verbose=args.verbose)
 
-    if args.tests:
+    if args.test:
         inds = data._outputs == 1
         pl.plot(data._inputs[inds,0], data._inputs[inds,1], '.g')
         pl.plot(data._inputs[~inds,0], data._inputs[~inds,1], '.r')
