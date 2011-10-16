@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
+Dataset interface module
 
+Based on dataset.lsh provided by Prof. LeCun
 
 """
 
@@ -44,7 +46,7 @@ class Dataset(object):
 
     Usage
     -----
-    >>> data = Dataset('spambase.data', split=0.7)
+    >>> data = Dataset('spambase.data', train=500)
     >>> in_train, out_train = data.training_set
     >>> in_test, out_test = data.test_set
 

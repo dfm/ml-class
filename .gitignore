@@ -1,0 +1,7 @@
+*.py[co]
+.*sw[pom]
+*.so
+.DS_Store
+*.png
+hw-linear*
+
