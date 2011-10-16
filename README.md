@@ -20,7 +20,7 @@ required helper functions (e.g. `normalize`, `shuffle`, etc.).  This module also
 includes a `LinearlySeperableDataset` that generates a truly linearly seperable
 mock dataset to run tests on.
 
-Experiments with `spambase`
+Experiments with _spambase_
 ---------------------------
 
 
