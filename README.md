@@ -1,8 +1,8 @@
-Machine Learning (Fall 2011) - Homework 1
-=========================================
+# Machine Learning (Fall 2011) - Homework 1
 
-Implementation
---------------
+### By: Daniel Foreman-Mackey (danfm@nyu.edu)
+
+##Implementation
 
 The Perceptron, LinearRegression and LogisticRegression algorithms are implemented
 in `linear/linear.py` as subclasses of the abstract LinearClassifier class.  The
