@@ -31,11 +31,15 @@ can just run
     python hw1.py --perceptron --linear --direct --logistic --ntrain 1000
 
 If you add the `--verbose` option, it will output the test and training error and
-loss at each iteration of the training phase.
+loss at each iteration of the training phase (_warning_: this is _very_ slow).
 
 ### Hyperparameters
 
-__TODO__: find the best hyperparams!
+For logistic regression, 
+
+![](hyperparams/Niter.png)
+![](hyperparams/loss.png)
+![](hyperparams/ferr.png)
 
 Questions
 ---------

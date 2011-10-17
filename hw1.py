@@ -11,6 +11,8 @@ __all__ = ['hw1']
 
 import argparse
 
+import numpy as np
+
 from dataset import Dataset, LinearlySeperableDataset
 from linear import Perceptron, LinearRegression, LogisticRegression
 
@@ -34,14 +36,22 @@ def hw1():
     parser.add_argument('-g', '--logistic',
             help='Train/test logistic regression on the dataset/spambase.dataset',
             action='store_true')
+    parser.add_argument('--hyperparams',
+            help='Test a grid in eta',
+            action='store_true')
     parser.add_argument('-v', '--verbose',
             help='Will the machine spit out all the results at each step?',
             action='store_true')
     args = parser.parse_args()
 
+    # check for stupidness
+    assert(args.linear or args.perceptron or args.direct or args.logistic)
+    assert(not args.test or not args.hyperparams)
+    if args.hyperparams:
+        assert(args.linear != args.logistic)
+
     # Run some tests on a truely linearly seperable system
     if args.test:
-        import numpy as np
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as pl
@@ -52,6 +62,23 @@ def hw1():
         # Run tests on "spambase" dataset
         data = Dataset('dataset/spambase.data', train=int(args.ntrain), test=1000,
                 shuffle=True, normalize=True)
+
+    if args.hyperparams:
+        f = open('hyperparams.dat', 'w')
+        for log10eta in np.linspace(-3.5, -1.5, 50):
+            eta = 10**log10eta
+            f.write("%f "%(eta))
+            if args.linear:
+                machine = LinearRegression(data, eta=eta, alpha=0.0)
+            elif args.logistic:
+                machine = LogisticRegression(data, eta=eta, alpha=0.0)
+            stats, i = machine.train(verbose=args.verbose)
+            f.write("%d "%i)
+            [f.write("%e "%stats[k]) for k in \
+                    ['train-loss', 'train-error', 'test-loss', 'test-error']]
+            f.write("\n")
+        f.close()
+        return
 
     if args.perceptron:
         machine = Perceptron(data)

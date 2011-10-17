@@ -74,7 +74,7 @@ class LinearClassifier(object):
             self.run(train_in[i])
             self.train_sample(train_in[i], train_out[i])
 
-    def train(self, maxiter=50, tol=1.25e-3, verbose=True):
+    def train(self, maxiter=50, tol=5.25e-2, verbose=True):
         self.training_sweep()
 
         machine_name = type(self).__name__
@@ -103,7 +103,7 @@ class LinearClassifier(object):
                 loss,error = self.test(on_training_set=True)
 
             # check for convergence
-            if i > 2 and np.abs(loss-loss0) < tol:
+            if i > 1 and np.abs(loss-loss0) < tol:
                 break
             loss0 = loss
         else:
@@ -114,6 +114,8 @@ class LinearClassifier(object):
             stats = self.stats()
             print "%4d"%(i+1),
             print layout%stats
+
+        return stats, i
 
     def test_sample(self, sample, label):
         """
