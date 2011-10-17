@@ -124,14 +124,18 @@ def hw1():
 
     if args.hyperparams:
         f = open('hyperparams.dat', 'w')
-        for log10eta in np.linspace(-3.5, -1.5, 50):
+        if args.linear:
+            logetas = np.linspace(-6, -4, 50)
+        else:
+            logetas = np.linspace(-3.5, -1.5, 50)
+        for log10eta in logetas:
             eta = 10**log10eta
             f.write("%f "%(eta))
             if args.linear:
                 machine = LinearRegression(data, eta=eta)
             if args.logistic:
                 machine = LogisticRegression(data, eta=eta)
-            stats, i = machine.train(verbose=args.verbose)
+            stats, i = machine.train(verbose=args.verbose, maxiter=100)
             f.write("%d "%i)
             [f.write("%e "%stats[k]) for k in \
                     ['train-loss', 'train-error', 'test-loss', 'test-error']]

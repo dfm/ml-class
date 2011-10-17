@@ -8,10 +8,12 @@ at: <https://github.com/dfm/ml-class/blob/master/README.md>.
 
 I implemented all the requirements in Python instead of LUSH since it is what I 
 feel comfortable with and what I use daily in my own research. The code requires
-NumPy to be installed on the system and it also needs SciPy (but only for the 
-direct solution to the linear system). The main algorithms are implemented in the
-`linear` module (in the source file `linear/linear.py`) and all the user facing
-code is in `hw1.py`.
+[NumPy](http://numpy.scipy.org/) to be installed on the system and it also needs 
+[SciPy](http://scipy.org/) (but only for the direct solution to the linear system).
+The main algorithms are implemented in the `linear` module (in the source file
+`linear/linear.py`) and all the user facing code is in `hw1.py`. The `database`
+module in `database/database.py` reads in the dataset and should be easily 
+extensible to other machine learning datasets.
 
 ## Implementation
 
@@ -64,6 +66,15 @@ To generate the data for these plots, run
 ![](https://github.com/dfm/ml-class/raw/master/hyperparams/loss.png)
 
 ![](https://github.com/dfm/ml-class/raw/master/hyperparams/ferr.png)
+
+The same experiment can be run on linear regression by running
+
+    python hw1.py --linear --hyperparams --ntrain 1000
+
+This experiment shows that linear regression for classification is very unstable.
+For the algorithm to converge at all, `eta` must be \lesssim 10^-4 but the actual
+value for convergence seems to be very sensitive to the particular training sample.
+Logistic regression, however, seems to be quite stable in the range listed above.
 
 ## Convergence
 
