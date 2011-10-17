@@ -24,8 +24,8 @@ to see a list of command line arguments and an explaination of the code usage.
 ## Implementation
 
 The `Perceptron`, `LinearRegression` and `LogisticRegression` algorithms are
-implemented in `linear/linear.py` as subclasses of the abstract LinearClassifier class.
-The `LinearClassifier` does the heavy lifting for training and testing of the 
+implemented in `linear/linear.py` as subclasses of the abstract `LinearClassifier`
+class. The `LinearClassifier` does the heavy lifting for training and testing of the 
 algorithms and the subclasses provide their own `loss_function` and `delta` methods.
 Not surprisingly, `loss_function` returns the value of the loss function given a 
 particular label and x vector.  `delta` return the gradient of `loss_function`,
@@ -54,10 +54,10 @@ loss at each iteration of the training phase (_warning_: this is _very_ slow).
 
 ## Hyperparameters
 
-For logistic regression, the optimal value of \eta seems to be between 0.002 
-and 0.005. For \eta > 0.005, the algorithm quickly diverges and for \eta < 0.002,
+For logistic regression, the optimal value of `eta` seems to be between 0.002 
+and 0.005. For `eta` > 0.005, the algorithm quickly diverges and for `eta` < 0.002,
 the algorithm converges very slowly. The three plots below show (as a function 
-of \eta):
+of `eta`):
 
 1. the total number of iterations before convergence,
 2. the loss calculated on the training set and
@@ -115,11 +115,11 @@ Therefore, both `LinearRegression` and `LogisticRegression` can be modified to
 include regularization by constructing the object with the keyword argument
 `alpha` or `beta`:
 
-    machine = LogisticRegression(data, eta=0.002, alpha=0.01)
+    machine = LogisticRegression(data, eta=0.002, alpha=0.2)
 
 or 
 
-    machine = LogisticRegression(data, eta=0.002, beta=0.01)
+    machine = LogisticRegression(data, eta=0.002, beta=0.1)
 
 For convenience, I defined the regularization terms as `0.5*alpha*||W||^2` and
 `0.5*beta*sum(|W_i|)`.  Therefore, the direct solution of the linear regression
