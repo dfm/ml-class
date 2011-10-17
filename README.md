@@ -48,6 +48,10 @@ of \eta):
 2. the loss calculated on the training set and
 3. the fractional error calculated on the training set.
 
+To generate the data for these plots, run
+
+    python hw1.py --logistic --hyperparams --ntrain 1000
+
 ![](https://github.com/dfm/ml-class/raw/master/hyperparams/Niter.png)
 
 ![](https://github.com/dfm/ml-class/raw/master/hyperparams/loss.png)
@@ -75,6 +79,10 @@ training/test error is ~9%.
      100  12 0.6504    7.0  4.0040   22.0
      500   6 0.7935   11.0  1.7380   12.7
     3000  26 0.5261    8.6  0.5429    9.7
+
+To run this test, run
+
+    python hw1.py --size
 
 Questions
 ---------
