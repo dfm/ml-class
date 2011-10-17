@@ -62,10 +62,10 @@ class LinearClassifier(object):
         raise NotImplementedError()
 
     def train_sample(self, sample, label):
-        a, b = self._alpha*self._eta, self._beta*self._eta
+        a, b = self._alpha*self._eta, 0.5 * self._beta*self._eta
         delta = self._eta * self.delta(label)
-        self._weights += delta * sample - a * self._weights - b
-        self._bias    += delta - a - b
+        self._weights -= delta * sample + a * self._weights + b
+        self._bias    -= delta + a + b
 
     def training_sweep(self):
         """
@@ -212,7 +212,7 @@ class Perceptron(LinearClassifier):
         return (np.sign(self._sum) - label) * self._sum
 
     def delta(self, label):
-        return label - np.sign(self._sum)
+        return np.sign(self._sum) - label
 
 class LinearRegression(LinearClassifier):
     """
@@ -225,7 +225,7 @@ class LinearRegression(LinearClassifier):
         return 0.5 * (self._sum - label)**2
 
     def delta(self, label):
-        return (label - self._sum)
+        return self._sum - label
 
     def solve(self):
         """
@@ -262,5 +262,5 @@ class LogisticRegression(LinearClassifier):
         return 2 * np.log(1+np.exp(-label*self._sum))
 
     def delta(self, label):
-        return 2*label/(1+np.exp(label*self._sum))
+        return -2*label/(1+np.exp(label*self._sum))
 

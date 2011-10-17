@@ -68,7 +68,7 @@ class Dataset(object):
             self.size_test = int(test)
 
         assert (test is None and 0 < int(train) < self.size) \
-                or (test is not None and 0 < int(test+train) <= self.size)
+                or (test is not None and 0 < int(self.size_test+train) <= self.size)
 
         if shuffle:
             np.random.shuffle(data)

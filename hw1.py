@@ -96,10 +96,11 @@ def hw1():
         
         for ntrain in [30]:
             data = Dataset('dataset/spambase.data', train=ntrain, test=1000,
-                shuffle=True, normalize=True)
-            for beta in np.linspace(0, 1, 10):
+                    shuffle=True, normalize=True)
+            
+            for beta in np.linspace(0, 0.5, 20):
                 machine = LogisticRegression(data, eta=0.002, beta=beta)
-                stats, i = machine.train(verbose=False, maxiter=100)
+                stats, i = machine.train(verbose=False, maxiter=200)
                 f.write("%d %f %d "%(ntrain, beta, i))
                 f.write("%(train-loss)e %(train-error)e "%stats)
                 f.write("%(test-loss)e %(test-error)e\n"%stats)
