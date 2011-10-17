@@ -127,10 +127,16 @@ figures. For `N=10`, the optimal `alpha` is ~0.8; for `N=30`, it is ~0.25; and f
 
 ![](https://github.com/dfm/ml-class/raw/master/alpha100.png)
 
-    b - Modify you logistic regression code to add the
-        L2 and L1 regularizers to the cost function.
-	Can you improve the performance on the test set
-	for training set sizes of 10, 30 and 100.
-	What value of alpha nad beta give the best results?
+### Optimal _beta_
 
+The results for `beta` are shown in the following three figures. This L1
+regularization doesn't seem to improve the efficiency of `LogisticRegression` for
+`N=10` but for `N=30` and `N=100`, `beta`~0.27 and ~0.07 (respectively) provide
+the optimal results.
+
+![](https://github.com/dfm/ml-class/raw/master/beta10.png)
+
+![](https://github.com/dfm/ml-class/raw/master/beta30.png)
+
+![](https://github.com/dfm/ml-class/raw/master/beta100.png)
 
