@@ -15,6 +15,12 @@ The main algorithms are implemented in the `linear` module (in the source file
 module in `database/database.py` reads in the dataset and should be easily 
 extensible to other machine learning datasets.
 
+You can run
+
+    python hw1.py --help
+
+to see a list of command line arguments and an explaination of the code usage.
+
 ## Implementation
 
 The Perceptron, LinearRegression and LogisticRegression algorithms are implemented
