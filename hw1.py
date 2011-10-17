@@ -39,16 +39,36 @@ def hw1():
     parser.add_argument('--hyperparams',
             help='Test a grid in eta',
             action='store_true')
+    parser.add_argument('-s', '--size',
+            help='Test a grid in training set size',
+            action='store_true')
     parser.add_argument('-v', '--verbose',
             help='Will the machine spit out all the results at each step?',
             action='store_true')
     args = parser.parse_args()
 
     # check for stupidness
-    assert(args.linear or args.perceptron or args.direct or args.logistic)
+    assert(args.linear or args.perceptron or args.direct or args.logistic \
+            or args.size)
     assert(not args.test or not args.hyperparams)
     if args.hyperparams:
         assert(args.linear != args.logistic)
+
+    if args.size:
+        f = open('ntrain.dat', 'w')
+        
+        for ntrain in [10, 30, 100, 500, 3000]:
+            data = Dataset('dataset/spambase.data', train=ntrain, test=1000,
+                shuffle=True, normalize=True)
+            machine = LogisticRegression(data, eta=0.002, alpha=0.0)
+            stats, i = machine.train(verbose=False, maxiter=100)
+            f.write("%d %d "%(ntrain, i))
+            f.write("%(train-loss)e %(train-error)e "%stats)
+            f.write("%(test-loss)e %(test-error)e\n"%stats)
+
+        f.close()
+        
+        return
 
     # Run some tests on a truely linearly seperable system
     if args.test:

@@ -50,6 +50,28 @@ of \eta):
 
 ![](https://github.com/dfm/ml-class/raw/master/hyperparams/ferr.png)
 
+### Convergence
+
+The stopping criterion that I used to detect convergence is just a simple threshold
+on the abosulte difference in the training loss between the current and previous
+iteration. It would probably be even better to implement a decaying learning rate
+in the future.
+
+### Training set size
+
+I trained the logistic regression classifier on 10, 30, 100, 500 and 3000 samples
+and the results are listed in the following table. The asymptotic value of the
+training/test error is ~9%.
+
+                Training         Test
+    Size  N   loss  %-error  loss  %-error
+    ---- --- ------ ------- ------ -------
+      10  36 0.3104   10.0  11.685   29.2
+      30  17 1.7813   13.3  5.2616   26.7
+     100  12 0.6504    7.0  4.0040   22.0
+     500   6 0.7935   11.0  1.7380   12.7
+    3000  26 0.5261    8.6  0.5429    9.7
+
 Questions
 ---------
 
