@@ -37,7 +37,7 @@ can just run
 If you add the `--verbose` option, it will output the test and training error and
 loss at each iteration of the training phase (_warning_: this is _very_ slow).
 
-### Hyperparameters
+## Hyperparameters
 
 For logistic regression, the optimal value of \eta seems to be between 0.002 
 and 0.005. For \eta > 0.005, the algorithm quickly diverges and for \eta < 0.002,
@@ -58,14 +58,14 @@ To generate the data for these plots, run
 
 ![](https://github.com/dfm/ml-class/raw/master/hyperparams/ferr.png)
 
-### Convergence
+## Convergence
 
 The stopping criterion that I used to detect convergence is just a simple threshold
 on the abosulte difference in the training loss between the current and previous
 iteration. It would probably be even better to implement a decaying learning rate
 in the future.
 
-### Training set size
+## Training set size
 
 I trained the logistic regression classifier on 10, 30, 100, 500 and 3000 samples
 and the results are listed in the following table. The asymptotic value of the
@@ -84,8 +84,24 @@ To run this test, run
 
     python hw1.py --size
 
-Questions
----------
+## Regularization
+
+I implemented L1 and L2 regularization in the `LinearClassifier` base class.
+Therefore, both `LinearRegression` and `LogisticRegression` can be modified to
+include regularization by constructing the object with the keyword argument
+`alpha` or `beta`:
+
+    machine = LogisticRegression(data, eta=0.002, alpha=0.01)
+
+or 
+
+    machine = LogisticRegression(data, eta=0.002, beta=0.01)
+
+For convenience, I defined the regularization terms as `0.5*alpha*||W||^2` and
+`0.5*beta*sum(|W_i|)`.  Therefore, the direct solution of the linear regression
+system is
+
+    W = (alpha*I + X^T X)^-1 X^T t
 
 3 - L2 and L1 regularization
     When the training set size is small, it is often helpful
