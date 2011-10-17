@@ -37,7 +37,7 @@ loss at each iteration of the training phase (_warning_: this is _very_ slow).
 
 For logistic regression, 
 
-![](hyperparams/Niter.png)
+![niter](hyperparams/Niter.png)
 ![](hyperparams/loss.png)
 ![](hyperparams/ferr.png)
 
