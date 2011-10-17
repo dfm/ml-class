@@ -35,8 +35,13 @@ loss at each iteration of the training phase (_warning_: this is _very_ slow).
 
 ### Hyperparameters
 
-For logistic regression, the optimal value of \eta seems to be between 0.002 and
-\0.005.
+For logistic regression, the optimal value of \eta seems to be between 0.002 
+and 0.005. For \eta > 0.005, the algorithm quickly diverges and for \eta < 0.002,
+the algorithm converges very slowly. The three plots below show (as a function 
+of \eta):
+1. the total number of iterations before convergence,
+2. the loss calculated on the training set and
+3. the fractional error calculated on the training set.
 
 ![](https://github.com/dfm/ml-class/raw/master/hyperparams/Niter.png)
 
