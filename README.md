@@ -35,13 +35,14 @@ loss at each iteration of the training phase (_warning_: this is _very_ slow).
 
 ### Hyperparameters
 
-For logistic regression, \[ \eta \]
+For logistic regression, the optimal value of \eta seems to be between 0.002 and
+\0.005.
 
-![](hyperparams/Niter.png)
+![](https://github.com/dfm/ml-class/raw/master/hyperparams/Niter.png)
 
-![](hyperparams/loss.png)
+![](https://github.com/dfm/ml-class/raw/master/hyperparams/loss.png)
 
-![](hyperparams/ferr.png)
+![](https://github.com/dfm/ml-class/raw/master/hyperparams/ferr.png)
 
 Questions
 ---------
