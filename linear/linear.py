@@ -12,8 +12,11 @@ from __future__ import division
 __all__ = ['Perceptron', 'LinearRegression', 'LogisticRegression']
 
 import numpy as np
-import scipy as sp
-import scipy.linalg
+try:
+    import scipy as sp
+    import scipy.linalg
+except:
+    sp = None
 
 # Define a table layout
 header = "Iter%11s%11s%11s%11s%11s%11s"%\
@@ -74,7 +77,7 @@ class LinearClassifier(object):
             self.run(train_in[i])
             self.train_sample(train_in[i], train_out[i])
 
-    def train(self, maxiter=50, tol=5.25e-2, verbose=True):
+    def train(self, maxiter=50, tol=1.25e-2, verbose=True):
         self.training_sweep()
 
         machine_name = type(self).__name__
@@ -103,7 +106,7 @@ class LinearClassifier(object):
                 loss,error = self.test(on_training_set=True)
 
             # check for convergence
-            if i > 1 and np.abs(loss-loss0) < tol:
+            if i > 1 and np.abs((loss-loss0)/loss) < tol:
                 break
             loss0 = loss
         else:
@@ -235,6 +238,7 @@ class LinearRegression(LinearClassifier):
         Equation 4.16 from Bishop's "Pattern Recognition and Machine Learning"
 
         """
+        assert(sp is not None)
         x, t = self._dataset.training_set
         x = np.concatenate((np.atleast_2d(np.ones(x.shape[0])).T, x), axis=-1)
         A = np.dot(x.T, x) + np.diag(self._alpha*np.ones(x.shape[-1]))

@@ -6,6 +6,11 @@ The source code for this project is available at: <https://github.com/dfm/ml-cla
 While this file should be readable as plain text, it can be seen rendered properly
 at: <https://github.com/dfm/ml-class/blob/master/README.md>.
 
+I implemented all the requirements in Python instead of LUSH since it is what I 
+feel comfortable with and what I use daily in my own research. The code requires
+NumPy to be installed on the system and it also needs SciPy (but only for the 
+direct solution to the linear system). 
+
 ## Implementation
 
 The Perceptron, LinearRegression and LogisticRegression algorithms are implemented
@@ -61,7 +66,7 @@ To generate the data for these plots, run
 ## Convergence
 
 The stopping criterion that I used to detect convergence is just a simple threshold
-on the abosulte difference in the training loss between the current and previous
+on the relative difference in the training loss between the current and previous
 iteration. It would probably be even better to implement a decaying learning rate
 in the future.
 
@@ -99,19 +104,27 @@ or
 
 For convenience, I defined the regularization terms as `0.5*alpha*||W||^2` and
 `0.5*beta*sum(|W_i|)`.  Therefore, the direct solution of the linear regression
-system is
+system (with L2 regularization) is
 
     W = (alpha*I + X^T X)^-1 X^T t
 
-3 - L2 and L1 regularization
-    When the training set size is small, it is often helpful
-    to add a regularization term to the loss function.
-    The most popular ones are:
-    L2 norm:   alpha*||W||^2    (aka "ridge regression")
-    L1 norm:   beta*[ SUM_i |W_i| ]  (aka "LASSO")
+instead of
 
-    a - how is the linear regression with direct solution
-        modified by the addition of an L2 regularizer.
+    W = (X^T X)^-1 X^T t
+
+### Optimal _alpha_
+
+To improve the performance on small datasets, I ran a grid in `alpha` and `beta`
+for 10, 30 and 100 training samples and the results are shown in the following 3
+figures. For `N=10`, the optimal `alpha` is ~0.8; for `N=30`, it is ~0.25; and for
+`N=100`, it is ~0.15.
+
+![](https://github.com/dfm/ml-class/raw/master/alpha10.png)
+
+![](https://github.com/dfm/ml-class/raw/master/alpha30.png)
+
+![](https://github.com/dfm/ml-class/raw/master/alpha100.png)
+
     b - Modify you logistic regression code to add the
         L2 and L1 regularizers to the cost function.
 	Can you improve the performance on the test set

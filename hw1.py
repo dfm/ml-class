@@ -42,14 +42,18 @@ def hw1():
     parser.add_argument('-s', '--size',
             help='Test a grid in training set size',
             action='store_true')
+    parser.add_argument('--alpha',
+            help='Test a grid in alpha',
+            action='store_true')
+    parser.add_argument('--beta',
+            help='Test a grid in beta',
+            action='store_true')
     parser.add_argument('-v', '--verbose',
             help='Will the machine spit out all the results at each step?',
             action='store_true')
     args = parser.parse_args()
 
     # check for stupidness
-    assert(args.linear or args.perceptron or args.direct or args.logistic \
-            or args.size)
     assert(not args.test or not args.hyperparams)
     if args.hyperparams:
         assert(args.linear != args.logistic)
@@ -60,14 +64,48 @@ def hw1():
         for ntrain in [10, 30, 100, 500, 3000]:
             data = Dataset('dataset/spambase.data', train=ntrain, test=1000,
                 shuffle=True, normalize=True)
-            machine = LogisticRegression(data, eta=0.002, alpha=0.0)
+            machine = LogisticRegression(data, eta=0.002)
             stats, i = machine.train(verbose=False, maxiter=100)
             f.write("%d %d "%(ntrain, i))
             f.write("%(train-loss)e %(train-error)e "%stats)
             f.write("%(test-loss)e %(test-error)e\n"%stats)
 
         f.close()
+
+        return
+
+    if args.alpha:
+        f = open('alpha.dat', 'w')
         
+        for ntrain in [10, 30, 100]:
+            data = Dataset('dataset/spambase.data', train=ntrain, test=1000,
+                shuffle=True, normalize=True)
+            for alpha in np.linspace(0, 1, 50):
+                machine = LogisticRegression(data, eta=0.002, alpha=alpha)
+                stats, i = machine.train(verbose=False, maxiter=100)
+                f.write("%d %f %d "%(ntrain, alpha, i))
+                f.write("%(train-loss)e %(train-error)e "%stats)
+                f.write("%(test-loss)e %(test-error)e\n"%stats)
+
+        f.close()
+
+        return
+
+    if args.beta:
+        f = open('beta.dat', 'w')
+        
+        for ntrain in [30]:
+            data = Dataset('dataset/spambase.data', train=ntrain, test=1000,
+                shuffle=True, normalize=True)
+            for beta in np.linspace(0, 1, 10):
+                machine = LogisticRegression(data, eta=0.002, beta=beta)
+                stats, i = machine.train(verbose=False, maxiter=100)
+                f.write("%d %f %d "%(ntrain, beta, i))
+                f.write("%(train-loss)e %(train-error)e "%stats)
+                f.write("%(test-loss)e %(test-error)e\n"%stats)
+
+        f.close()
+
         return
 
     # Run some tests on a truely linearly seperable system
@@ -89,9 +127,9 @@ def hw1():
             eta = 10**log10eta
             f.write("%f "%(eta))
             if args.linear:
-                machine = LinearRegression(data, eta=eta, alpha=0.0)
-            elif args.logistic:
-                machine = LogisticRegression(data, eta=eta, alpha=0.0)
+                machine = LinearRegression(data, eta=eta)
+            if args.logistic:
+                machine = LogisticRegression(data, eta=eta)
             stats, i = machine.train(verbose=args.verbose)
             f.write("%d "%i)
             [f.write("%e "%stats[k]) for k in \
@@ -105,7 +143,7 @@ def hw1():
         machine.train(verbose=args.verbose)
 
     if args.linear:
-        machine = LinearRegression(data, eta=0.00003, alpha=0.0)
+        machine = LinearRegression(data, eta=0.00003)
         machine.train(verbose=args.verbose)
 
     if args.direct:
@@ -113,7 +151,7 @@ def hw1():
         machine.solve()
 
     if args.logistic:
-        machine = LogisticRegression(data, eta=0.01, alpha=0.0)
+        machine = LogisticRegression(data, eta=0.002)
         machine.train(verbose=args.verbose)
 
     if args.test:
