@@ -35,10 +35,12 @@ loss at each iteration of the training phase (_warning_: this is _very_ slow).
 
 ### Hyperparameters
 
-For logistic regression, 
+For logistic regression, \[ \eta \]
 
 ![](hyperparams/Niter.png)
+
 ![](hyperparams/loss.png)
+
 ![](hyperparams/ferr.png)
 
 Questions
