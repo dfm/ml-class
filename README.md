@@ -23,11 +23,11 @@ to see a list of command line arguments and an explaination of the code usage.
 
 ## Implementation
 
-The Perceptron, LinearRegression and LogisticRegression algorithms are implemented
-in `linear/linear.py` as subclasses of the abstract LinearClassifier class.  The
-LinearClassifier does the heavy lifting for training and testing of the algorithms
-and the subclasses provide their own `loss_function` and `delta` methods. Not
-surprisingly, `loss_function` returns the value of the loss function given a 
+The `Perceptron`, `LinearRegression` and `LogisticRegression` algorithms are
+implemented in `linear/linear.py` as subclasses of the abstract LinearClassifier class.
+The `LinearClassifier` does the heavy lifting for training and testing of the 
+algorithms and the subclasses provide their own `loss_function` and `delta` methods.
+Not surprisingly, `loss_function` returns the value of the loss function given a 
 particular label and x vector.  `delta` return the gradient of `loss_function`,
 __divided by x__ since the x vector factors out of the update term in stochastic
 gradient descent in the same way for each of these algorithms.  The LinearRegression
