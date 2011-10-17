@@ -94,11 +94,11 @@ def hw1():
     if args.beta:
         f = open('beta.dat', 'w')
         
-        for ntrain in [30]:
+        for ntrain in [10, 30, 100]:
             data = Dataset('dataset/spambase.data', train=ntrain, test=1000,
                     shuffle=True, normalize=True)
             
-            for beta in np.linspace(0, 0.5, 20):
+            for beta in np.linspace(0, 1, 100):
                 machine = LogisticRegression(data, eta=0.002, beta=beta)
                 stats, i = machine.train(verbose=False, maxiter=200)
                 f.write("%d %f %d "%(ntrain, beta, i))
