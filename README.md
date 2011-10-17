@@ -2,6 +2,10 @@
 
 ### By: Daniel Foreman-Mackey (<danfm@nyu.edu>)
 
+The source code for this project is available at: <https://github.com/dfm/ml-class>.
+While this file should be readable as plain text, it can be seen rendered properly
+at: <https://github.com/dfm/ml-class/blob/master/README.md>.
+
 ## Implementation
 
 The Perceptron, LinearRegression and LogisticRegression algorithms are implemented
@@ -74,33 +78,6 @@ training/test error is ~9%.
 
 Questions
 ---------
-
-2 - Experiments with the Spambase dataset
-
-      - set the training set size to 1000 
-        and the test set size to 1000.
-      - The stochastic gradient method for linear regression
-        and logistic regression require you to find good 
-        values for the learning rate (the step size, eta).
-    a - what learning rates will cause linear regression
-        and logistic regression to diverge?
-    b - what learning rate for linear regression 
-        and logistic regression that produce
- 	the fastest convergence?
-    c - implement a stopping criterion that 
-        detects convergence.
-
-    d - train logistic regression with 10, 30, 100, 500, 
-        and 3000 training samples, and 1000 test samples. 
-        for each size of training set, provide:
-        - the final value of the average loss, and 
-	  the classification errors on the training 
-	  set and the test set
-        - the value of the learning rate used
-        - the number of iterations performed
-
-    e - what is the asymptotic value of the training/test 
-        error for very large training sets?
 
 3 - L2 and L1 regularization
     When the training set size is small, it is often helpful
