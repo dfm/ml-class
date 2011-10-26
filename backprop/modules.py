@@ -122,45 +122,6 @@ class SigmoidModule(LearningModule):
         # dtanh = 1/cosh^2
         self.dx = self.next_module.dx/np.cosh(self.prev_module.x)**2
 
-class LayeredModule(LearningModule):
-    """
-    A set of modules arranged in layers
-
-    Parameters
-    ----------
-    modules : list of classes
-        These are classes, _not instances_!
-
-    module_args : list of tuples
-        This is a list of the extra argument for the module construction. Yes,
-        I know that this is awkward!
-
-    Notes
-    -----
-    Each module is constructed as:
-
-        >>> module[i](*(module_args[i]), prev_module=some_module_object)
-
-    """
-    def __init__(self, modules, module_args, *args, **kwargs):
-        super(LayeredModule, self).__init__(*args, **kwargs)
-        self.modules = [modules[0](*(module_args[0]), prev_module=self)]
-        for i,m in enumerate(modules[1:]):
-            self.modules.append(m(*(module_args[i+1]), prev_module=self.modules[-1]))
-
-    def randomize(self, **kwargs):
-        [m.randomize(**kwargs) for m in self.modules]
-
-    def fprop(self):
-        # recursively fprop
-        self.modules[-1].do_fprop()
-        self.x = self.modules[-1].x
-
-    def bprop(self):
-        self.modules[0].do_bprop()
-        self.dx = self.modules[0].dx
-        self.dw = self.modules[0].dw
-
 if __name__ == '__main__':
     pass
 
