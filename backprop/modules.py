@@ -29,8 +29,8 @@ class LearningModule(object):
         self.prev_module.connect_module(self)
 
         s = self.prev_module.x.size
-        self.w  = np.zeros(s)
-        self.dw = np.zeros(s)
+        self.w  = None
+        self.dw = None
         self.x  = np.zeros(s)
         self.dx = np.zeros(s)
 
@@ -81,7 +81,9 @@ class LinearModule(LearningModule):
     def randomize(self, **kwargs):
         z2 = self.prev_module.x.size
         kz = kwargs.pop('k', 1.0)/np.sqrt(z2)
-        self.w  = 2*kz*np.random.rand((self.out_dim, z2))-kz
+
+        self.shape = (self.out_dim, z2)
+        self.w  = 2*kz*np.random.rand(*(self.shape))-kz
 
     def fprop(self):
         self.x = np.dot(self.w, self.prev_module.x)
@@ -94,9 +96,10 @@ class EuclideanModule(LearningModule):
     def __init__(self, y, *args, **kwargs):
         super(EuclideanModule, self).__init__(*args, **kwargs)
         self.y = y
-        self.x  = 0.0
+        self.x = 0.0
 
     def fprop(self):
+        self.prev_module2.do_fprop()
         self.x = 0.5*np.linalg.norm(self.prev_module.x-self.y)**2
 
     def bprop(self):
@@ -105,7 +108,7 @@ class EuclideanModule(LearningModule):
 
 class BiasModule(LearningModule):
     def randomize(self, **kwargs):
-        self.w = np.random.rand(self.w.shape)
+        self.w = np.random.rand(*(self.x.shape))
 
     def fprop(self):
         self.x = self.prev_module.x + self.w
