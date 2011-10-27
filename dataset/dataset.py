@@ -51,12 +51,14 @@ class Dataset(object):
     >>> in_test, out_test = data.test_set
 
     """
-    def __init__(self, fn=None, data=None, outcol=-1, train=1000, test=None,
-            shuffle=True, normalize=True, binary=True):
+    def __init__(self, fn=None, test_fn=None, data=None, outcol=-1, train=1000, test=None,
+            shuffle=True, normalize=True):
         assert fn is not None or data is not None
 
         if fn is not None:
             data = np.array([line.split(',') for line in open(fn)], dtype=float)
+        if shuffle:
+            np.random.shuffle(data)
 
         # dimensions
         self.size = data.shape[0]
@@ -67,35 +69,54 @@ class Dataset(object):
         else:
             self.size_test = int(test)
 
-        assert (test is None and 0 < int(train) < self.size) \
-                or (test is not None and 0 < int(self.size_test+train) <= self.size)
+        assert test_fn is not None or ((test is None and 0 < int(train) < self.size) \
+                or (test is not None and 0 < int(self.size_test+train) <= self.size))
 
-        if shuffle:
-            np.random.shuffle(data)
+        if test_fn is None:
+            inputs,outputs,self.nclass = \
+                    self._precompute(data, outcol=outcol, normalize=normalize)
 
+            self._inputs_train  =  inputs[:self.size_train]
+            self._outputs_train = outputs[:self.size_train]
+            delta = self.size_train + self.size_test
+            self._inputs_test   =  inputs[self.size_train:delta]
+            self._outputs_test  = outputs[self.size_train:delta]
+
+        else:
+            self._inputs_train,self._outputs_train,self.nclass = \
+                    self._precompute(data, outcol=outcol, N=self.size_train,
+                            normalize=normalize)
+
+            # load test data
+            test_data = np.array([line.split(',') for line in open(test_fn)],
+                    dtype=float)
+            if test is None:
+                self.size_test = test_data.shape[0]
+            self._inputs_test, self._outputs_test, self.nclass = \
+                    self._precompute(test_data, outcol=outcol, N=self.size_test,
+                            normalize=normalize, nclass=self.nclass)
+
+    def _precompute(self, data, outcol=-1, N=None, nclass=None, normalize=True):
         # slice output vector out of data file
         if outcol < 0:
             outcol += data.shape[-1]
+
         inds = np.arange(data.shape[-1]) != outcol
-        self._inputs  = data[:,inds]
-        self._outputs = data[:,outcol]
-        if binary:
-            self._outputs[self._outputs == 0] = -1
+        inputs  = data[:,inds]
 
-        # normalize and split the dataset into training and test sets
-        if normalize:
-            self.normalize() # normalize performs the split itself
-        else:
-            # we should split the dataset if we didn't already normalize
-            self._split()
+        inds = np.array(data[:,outcol], dtype=int)
+        if nclass is None:
+            nclass = inds.max() # number of classes
 
-    def _split(self):
-        # split the dataset into training and test sets
-        self._inputs_train  = self._inputs[:self.size_train]
-        self._outputs_train = self._outputs[:self.size_train]
-        delta = self.size_train + self.size_test
-        self._inputs_test   = self._inputs[self.size_train:delta]
-        self._outputs_test  = self._outputs[self.size_train:delta]
+        outputs = np.zeros((self.size, nclass), dtype=int)
+        # don't even ask...
+        outputs[(np.arange(nclass)[:,None] == inds-1).T] = 1 # </evil>
+
+        if N is not None:
+            inputs  = inputs[:N]
+            outputs = outputs[:N,:]
+
+        return inputs, outputs, nclass
 
     @property
     def training_set(self):
@@ -112,7 +133,6 @@ class Dataset(object):
         """
         self._inputs -= np.mean(self._inputs, axis=0)
         self._inputs /= np.var(self._inputs, axis=0)
-        self._split()
 
 class LinearlySeperableDataset(Dataset):
     """
@@ -133,10 +153,9 @@ class LinearlySeperableDataset(Dataset):
             data = 0.5-np.random.rand(ndim*nsamples).reshape((nsamples, ndim))
             self.weights = 0.5-np.random.rand(ndim)
             self.bias = 0.5-np.random.rand()
-            out_data = np.sign(np.dot(self.weights, data.T) + self.bias)
+            out_data = np.array(0.5*(np.sign(np.dot(self.weights, data.T) \
+                    + self.bias)+1), dtype=int)
         data = np.concatenate((data, np.atleast_2d(out_data).T), axis=-1)
-        kwargs['binary'] = False
-        kwargs['normalize'] = False
         super(LinearlySeperableDataset, self).__init__(data=data, **kwargs)
 
     def __str__(self):

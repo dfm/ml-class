@@ -32,6 +32,7 @@ class Machine(object):
 
         for m in self._modules:
             if m.w is not None:
+                print m.w
                 m.w -= eta*(m.dw + decay*m.w)
 
 if __name__ == '__main__':

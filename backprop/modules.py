@@ -28,7 +28,7 @@ class LearningModule(object):
         self.next_module = None
         self.prev_module.connect_module(self)
 
-        s = self.prev_module.x.size
+        s = self.prev_module.x.shape[0]
         self.w  = None
         self.dw = None
         self.x  = np.zeros(s)
@@ -52,10 +52,17 @@ class LearningModule(object):
 
 class InputModule(LearningModule):
     def __init__(self, x, y):
-        self.x, self.y = x, y
+        self._data_x, self._data_y = x, y
+        self.w, self.dw = None, None
+        self.index = 0
+        self.x = self._data_x[self.index]
+        self.y = self._data_y[self.index]
 
     def do_fprop(self):
-        pass
+        self.x = self._data_x[self.index]
+        self.y = self._data_y[self.index]
+        self.index += 1
+        self.index = self.index%self._data_x.shape[0]
 
     def do_bprop(self):
         self.next_module.do_bprop()
@@ -79,7 +86,7 @@ class LinearModule(LearningModule):
         self.x  = np.zeros(out_dim)
 
     def randomize(self, **kwargs):
-        z2 = self.prev_module.x.size
+        z2 = self.prev_module.x.shape[0]
         kz = kwargs.pop('k', 1.0)/np.sqrt(z2)
 
         self.shape = (self.out_dim, z2)
@@ -89,8 +96,8 @@ class LinearModule(LearningModule):
         self.x = np.dot(self.w, self.prev_module.x)
 
     def bprop(self):
-        self.dx = np.dot(self.w, self.next_module.dx)
-        self.dw = np.dot(self.dx, self.prev_module.x)
+        self.dx = np.dot(self.w.T, self.next_module.dx)
+        self.dw = np.dot(self.dx, self.prev_module.x.T)
 
 class EuclideanModule(LearningModule):
     def __init__(self, y, *args, **kwargs):
@@ -99,10 +106,9 @@ class EuclideanModule(LearningModule):
         self.x = 0.0
 
     def fprop(self):
-        self.prev_module2.do_fprop()
         self.x = 0.5*np.linalg.norm(self.prev_module.x-self.y)**2
 
-    def bprop(self):
+    def do_bprop(self):
         self.dx = self.prev_module.x-self.y
         self.dy = -self.dx
 
@@ -111,7 +117,7 @@ class BiasModule(LearningModule):
         self.w = np.random.rand(*(self.x.shape))
 
     def fprop(self):
-        self.x = self.prev_module.x + self.w
+        self.x = self.prev_module.x.T + self.w
 
     def bprop(self):
         self.dx = self.next_module.dx
