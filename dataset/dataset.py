@@ -22,6 +22,9 @@ class Dataset(object):
     fn : str, optional
         The path to the CSV data file. Provide either this or the data directly
 
+    test_fn : str, optional
+        If the test set is stored in a different file, it can be provided here
+
     data : numpy.ndarray, optional
         The raw data. Either this or `fn` must not be None.
 
@@ -73,7 +76,7 @@ class Dataset(object):
                 or (test is not None and 0 < int(self.size_test+train) <= self.size))
 
         if test_fn is None:
-            inputs,outputs,self.nclass,self.minclass = \
+            inputs,outputs,self.nclass,self.minclass,muvar = \
                     self._precompute(data, outcol=outcol, normalize=normalize)
 
             self._inputs_train  =  inputs[:self.size_train]
@@ -83,7 +86,8 @@ class Dataset(object):
             self._outputs_test  = outputs[self.size_train:delta]
 
         else:
-            self._inputs_train,self._outputs_train,self.nclass,self.minclass = \
+            self._inputs_train, self._outputs_train,\
+                    self.nclass, self.minclass, muvar = \
                     self._precompute(data, outcol=outcol, N=self.size_train,
                             normalize=normalize)
 
@@ -92,11 +96,14 @@ class Dataset(object):
                     dtype=float)
             if test is None:
                 self.size_test = test_data.shape[0]
-            self._inputs_test, self._outputs_test, self.nclass, self.minclass = \
+            self._inputs_test, self._outputs_test, \
+                    self.nclass, self.minclass, muvar = \
                     self._precompute(test_data, outcol=outcol, N=self.size_test,
-                            normalize=normalize, nclass=self.nclass, minclass=self.minclass)
+                            normalize=normalize, nclass=self.nclass,
+                            minclass=self.minclass, muvar=muvar)
 
-    def _precompute(self, data, outcol=-1, N=None, nclass=None, minclass=None, normalize=True):
+    def _precompute(self, data, outcol=-1, N=None, nclass=None, minclass=None,
+            normalize=True, muvar=None):
         # slice output vector out of data file
         if outcol < 0:
             outcol += data.shape[-1]
@@ -117,11 +124,13 @@ class Dataset(object):
             inputs  = inputs[:N]
             outputs = outputs[:N,:]
 
+        if normalize and muvar is None:
+            muvar = (np.mean(inputs, axis=0), np.std(inputs, axis=0))
         if normalize:
-            inputs -= np.mean(inputs, axis=0)
-            inputs /= np.var(inputs, axis=0)
+            inputs -= muvar[0]
+            inputs /= muvar[1]
 
-        return inputs, outputs, nclass, minclass
+        return inputs, outputs, nclass, minclass, muvar
 
     @property
     def training_set(self):

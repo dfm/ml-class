@@ -109,10 +109,6 @@ class EuclideanModule(LearningModule):
         self.dy = -self.dx
 
 class LinearModule(LearningModule):
-    """
-    A linear module
-
-    """
     def __init__(self, *args, **kwargs):
         super(LinearModule, self).__init__(*args, **kwargs)
         self.x = np.zeros((self.dim_out, 1))
@@ -154,6 +150,18 @@ class SigmoidModule(LearningModule):
         self.dx = self.next_module.dx/np.cosh(self.prev_module.x.T)**2
         assert(self.dx.shape == self.next_module.dx.shape)
 
-if __name__ == '__main__':
-    pass
+class SoftMax(LearningModule):
+    def randomize(self, **kwargs):
+        self.w = np.random.rand()
+
+    def fprop(self):
+        self.x = np.exp(-self.w * self.prev_module.x)
+        self.x /= np.sum(self.x)
+
+    def bprop(self):
+        # (dX_out/dX_in)_k = beta * ( (X_{out,k})^2 - X_{out,k} )
+        # (dX_out/dbeta)_k = X_{in,k} . ( (X_{out,k})^2 - X_{out,k} )
+        delta = self.x**2-self.x
+        self.dx = self.w * delta
+        self.dw = np.dot( self.prev_module.x, delta )
 

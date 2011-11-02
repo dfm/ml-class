@@ -85,6 +85,3 @@ class Machine(object):
             tot_err  += error
         return tot_loss/N, tot_err/N
 
-if __name__ == '__main__':
-    pass
-
