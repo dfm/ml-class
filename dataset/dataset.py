@@ -116,15 +116,17 @@ class Dataset(object):
             inputs  = inputs[:N]
             outputs = outputs[:N,:]
 
+        print "outputs:", np.sum(outputs, axis=0)
+
         return inputs, outputs, nclass
 
     @property
     def training_set(self):
-        return (self._inputs_train, self._outputs_train)
+        return (self._inputs_train, np.atleast_2d(self._outputs_train))
 
     @property
     def test_set(self):
-        return (self._inputs_test, self._outputs_test)
+        return (self._inputs_test, np.atleast_2d(self._outputs_test))
 
     def normalize(self):
         """
@@ -149,13 +151,13 @@ class LinearlySeperableDataset(Dataset):
     """
     def __init__(self, ndim = 20, nsamples = 4000, **kwargs):
         out_data = np.ones(nsamples)
-        while not np.abs(np.sum(out_data)) < nsamples/2:
+        while not 0.25*nsamples < np.abs(np.sum(out_data)) < 0.75*nsamples:
             data = 0.5-np.random.rand(ndim*nsamples).reshape((nsamples, ndim))
             self.weights = 0.5-np.random.rand(ndim)
             self.bias = 0.5-np.random.rand()
             out_data = np.array(0.5*(np.sign(np.dot(self.weights, data.T) \
                     + self.bias)+1), dtype=int)
-        data = np.concatenate((data, np.atleast_2d(out_data).T), axis=-1)
+        data = np.concatenate((data, np.atleast_2d(out_data+1).T), axis=-1)
         super(LinearlySeperableDataset, self).__init__(data=data, **kwargs)
 
     def __str__(self):

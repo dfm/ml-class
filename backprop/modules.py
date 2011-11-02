@@ -23,16 +23,32 @@ class LearningModule(object):
         The module that connects to this one
 
     """
-    def __init__(self, prev_module=None):
+    def __init__(self, prev_module=None, dim_out=None, dim_in=None):
         self.prev_module = prev_module
         self.next_module = None
-        self.prev_module.connect_module(self)
 
-        s = self.prev_module.x.shape[0]
-        self.w  = None
-        self.dw = None
-        self.x  = np.zeros(s)
-        self.dx = np.zeros(s)
+        if prev_module is not None:
+            # the input dimensions will be set by the previous module's output dimensions
+            self.dim_in = self.prev_module.dim_out
+            if dim_in is not None:
+                assert(dim_in == self.dim_in)
+        else:
+            self.dim_in = dim_in
+
+        # output dimensions default to the same as dim_in
+        if dim_out is not None:
+            self.dim_out = dim_out
+        else:
+            self.dim_out = self.dim_in
+
+        if prev_module is not None:
+            # connect the previous module
+            self.prev_module.connect_module(self)
+
+        self.w  = None                        # W
+        self.dw = None                        # dE/dW
+        self.x  = np.zeros((self.dim_out, 1)) # X_out
+        self.dx = np.zeros((self.dim_in, 1))  # dE/dXin
 
         self.randomize()
 
@@ -40,84 +56,88 @@ class LearningModule(object):
         pass
 
     def connect_module(self, next_module):
+        assert(self.dim_out == next_module.dim_in)
         self.next_module = next_module
 
     def do_fprop(self):
         self.prev_module.do_fprop()
+        self.y = self.prev_module.y
         self.fprop()
 
     def do_bprop(self):
         self.next_module.do_bprop()
+        self.dy = self.next_module.dy
         self.bprop()
+        assert (self.w is None and self.dw is None) or self.dw.T.shape == self.w.shape, repr(self)
+        assert self.dx.shape == (1, self.dim_in), repr(self)
+
+    def fprop(self):
+        pass
+
+    def bprop(self):
+        pass
 
 class InputModule(LearningModule):
-    def __init__(self, x, y):
-        self._data_x, self._data_y = x, y
+    def __init__(self, dim_x, dim_y):
+        self.dim_out = dim_x
+        self.dim_y   = dim_y
         self.w, self.dw = None, None
-        self.index = 0
-        self.x = self._data_x[self.index]
-        self.y = self._data_y[self.index]
 
+    # override default fprop and bprop behaviour
     def do_fprop(self):
-        self.x = self._data_x[self.index]
-        self.y = self._data_y[self.index]
-        self.index += 1
-        self.index = self.index%self._data_x.shape[0]
+        pass
 
     def do_bprop(self):
         self.next_module.do_bprop()
+
+    def current_sample(self):
+        return self.x, self.y
+
+    def set_current_sample(self, x, y):
+        # NOTE: this only works when x and y are 0 or 1-D arrays (not 2-D)
+        #       this converts the inputs to column vectors
+        self.x, self.y = np.atleast_2d(x).T, np.atleast_2d(y).T
+
+class EuclideanModule(LearningModule):
+    def fprop(self):
+        assert(self.prev_module.x.shape == self.prev_module.y.shape)
+        self.x = 0.5*np.linalg.norm(self.prev_module.x-self.prev_module.y)**2
+
+    def do_bprop(self):
+        self.dx = (self.prev_module.x - self.y).T
+        self.dy = -self.dx
 
 class LinearModule(LearningModule):
     """
     A linear module
 
-    Parameters
-    ----------
-    out_dim : int
-        Dimension of output
-
     """
-    def __init__(self, out_dim, *args, **kwargs):
-        self.out_dim = out_dim
-
+    def __init__(self, *args, **kwargs):
         super(LinearModule, self).__init__(*args, **kwargs)
-
-        # initialize the weight vector randomly
-        self.x  = np.zeros(out_dim)
+        self.x = np.zeros((self.dim_out, 1))
 
     def randomize(self, **kwargs):
-        z2 = self.prev_module.x.shape[0]
-        kz = kwargs.pop('k', 1.0)/np.sqrt(z2)
-
-        self.shape = (self.out_dim, z2)
-        self.w  = 2*kz*np.random.rand(*(self.shape))-kz
+        kz = kwargs.pop('k', 1.0)/np.sqrt(self.dim_in)
+        self.shape = (self.dim_out, self.dim_in)
+        self.w  = (2*np.random.rand(*(self.shape)) - 1) * kz
 
     def fprop(self):
         self.x = np.dot(self.w, self.prev_module.x)
+        assert(self.x.shape[0] == self.dim_out and self.x.shape[1] == 1)
 
     def bprop(self):
-        self.dx = np.dot(self.w.T, self.next_module.dx)
-        self.dw = np.dot(self.dx, self.prev_module.x.T)
-
-class EuclideanModule(LearningModule):
-    def __init__(self, y, *args, **kwargs):
-        super(EuclideanModule, self).__init__(*args, **kwargs)
-        self.y = y
-        self.x = 0.0
-
-    def fprop(self):
-        self.x = 0.5*np.linalg.norm(self.prev_module.x-self.y)**2
-
-    def do_bprop(self):
-        self.dx = self.prev_module.x-self.y
-        self.dy = -self.dx
+        self.dw = np.dot(self.next_module.dx.T, self.prev_module.x.T).T
+        self.dx = np.dot(self.w.T, self.next_module.dx.T).T
+        assert(self.dw.shape == self.shape)
+        assert(self.dx.shape[1] == self.dim_in and self.dx.shape[0] == 1)
 
 class BiasModule(LearningModule):
     def randomize(self, **kwargs):
-        self.w = np.random.rand(*(self.x.shape))
+        self.w = np.random.rand(self.dim_in, 1)
 
     def fprop(self):
-        self.x = self.prev_module.x.T + self.w
+        assert(self.prev_module.x.shape == self.w.shape)
+        self.x = self.prev_module.x + self.w
 
     def bprop(self):
         self.dx = self.next_module.dx
@@ -129,7 +149,9 @@ class SigmoidModule(LearningModule):
 
     def bprop(self):
         # dtanh = 1/cosh^2
-        self.dx = self.next_module.dx/np.cosh(self.prev_module.x)**2
+        # careful with dimensions
+        self.dx = self.next_module.dx/np.cosh(self.prev_module.x.T)**2
+        assert(self.dx.shape == self.next_module.dx.shape)
 
 if __name__ == '__main__':
     pass
