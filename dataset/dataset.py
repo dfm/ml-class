@@ -73,7 +73,7 @@ class Dataset(object):
                 or (test is not None and 0 < int(self.size_test+train) <= self.size))
 
         if test_fn is None:
-            inputs,outputs,self.nclass = \
+            inputs,outputs,self.nclass,self.minclass = \
                     self._precompute(data, outcol=outcol, normalize=normalize)
 
             self._inputs_train  =  inputs[:self.size_train]
@@ -83,7 +83,7 @@ class Dataset(object):
             self._outputs_test  = outputs[self.size_train:delta]
 
         else:
-            self._inputs_train,self._outputs_train,self.nclass = \
+            self._inputs_train,self._outputs_train,self.nclass,self.minclass = \
                     self._precompute(data, outcol=outcol, N=self.size_train,
                             normalize=normalize)
 
@@ -92,11 +92,11 @@ class Dataset(object):
                     dtype=float)
             if test is None:
                 self.size_test = test_data.shape[0]
-            self._inputs_test, self._outputs_test, self.nclass = \
+            self._inputs_test, self._outputs_test, self.nclass, self.minclass = \
                     self._precompute(test_data, outcol=outcol, N=self.size_test,
-                            normalize=normalize, nclass=self.nclass)
+                            normalize=normalize, nclass=self.nclass, minclass=self.minclass)
 
-    def _precompute(self, data, outcol=-1, N=None, nclass=None, normalize=True):
+    def _precompute(self, data, outcol=-1, N=None, nclass=None, minclass=None, normalize=True):
         # slice output vector out of data file
         if outcol < 0:
             outcol += data.shape[-1]
@@ -105,20 +105,23 @@ class Dataset(object):
         inputs  = data[:,inds]
 
         inds = np.array(data[:,outcol], dtype=int)
-        if nclass is None:
-            nclass = inds.max() # number of classes
+        if nclass is None or minclass is None:
+            minclass = inds.min()
+            nclass   = inds.max()-minclass + 1 # number of classes
 
         outputs = np.zeros((self.size, nclass), dtype=int)
         # don't even ask...
-        outputs[(np.arange(nclass)[:,None] == inds-1).T] = 1 # </evil>
+        outputs[(np.arange(nclass)[:,None] == inds-minclass).T] = 1 # </evil>
 
         if N is not None:
             inputs  = inputs[:N]
             outputs = outputs[:N,:]
 
-        print "outputs:", np.sum(outputs, axis=0)
+        if normalize:
+            inputs -= np.mean(inputs, axis=0)
+            inputs /= np.var(inputs, axis=0)
 
-        return inputs, outputs, nclass
+        return inputs, outputs, nclass, minclass
 
     @property
     def training_set(self):

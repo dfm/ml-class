@@ -3,5 +3,5 @@
 *.so
 .DS_Store
 *.png
-hw-linear*
+hw-backprop*
 

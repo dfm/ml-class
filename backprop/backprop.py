@@ -43,25 +43,47 @@ class Machine(object):
     """
     def __init__(self, data):
         self._data = data
-        self.x, self.y = data.training_set
-        self._modules = [InputModule(self.x.shape[1], self.y.shape[1])]
+        self._modules = [InputModule(data.nvariables, data.nclass)]
 
-    def add_module(self, module, args=()):
-        self._modules.append(module(*args, prev_module=self._modules[-1]))
+    def add_module(self, module, args=(), kwargs={}):
+        self._modules.append(module(*args, prev_module=self._modules[-1], **kwargs))
 
-    def train_sample(self, sample, label, eta=0.00005, decay=0.1):
+    def run(self, sample, label):
         self._modules[0].set_current_sample(sample, label)
         self._modules[-1].do_fprop()
         self._modules[0].do_bprop()
+
+    def train_sample(self, sample, label, eta, decay):
+        self.run(sample, label)
 
         for m in self._modules:
             if m.w is not None:
                 m.w -= eta*(m.dw.T + decay*m.w)
 
-    def train(self, eta=0.005, decay=0.0):
+    def train(self, eta=0.1, decay=0.0001):
+        x, y = self._data.training_set
         for i in xrange(self._data.size_train):
-            self.train_sample(self.x[i], self.y[i], eta=eta, decay=decay)
+            self.train_sample(x[i], y[i], eta, decay)
 
+    def test_sample(self, sample, label):
+        self.run(sample, label)
+        losses = self._modules[-1].losses.T[0]
+        error  = losses[label==1] != np.min(losses)
+        return self._modules[-1].x, error[0]
+
+    def test(self, training_set=False):
+        if training_set:
+            x, y = self._data.training_set
+            N = self._data.size_train
+        else:
+            x, y = self._data.test_set
+            N = self._data.size_test
+        tot_loss, tot_err = 0., 0.
+        for i in xrange(N):
+            loss, error = self.test_sample(x[i], y[i])
+            tot_loss += loss
+            tot_err  += error
+        return tot_loss/N, tot_err/N
 
 if __name__ == '__main__':
     pass

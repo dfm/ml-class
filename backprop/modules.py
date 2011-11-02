@@ -101,7 +101,8 @@ class InputModule(LearningModule):
 class EuclideanModule(LearningModule):
     def fprop(self):
         assert(self.prev_module.x.shape == self.prev_module.y.shape)
-        self.x = 0.5*np.linalg.norm(self.prev_module.x-self.prev_module.y)**2
+        self.losses = 0.5*(self.prev_module.x-self.prev_module.y)**2
+        self.x = np.sum(self.losses)
 
     def do_bprop(self):
         self.dx = (self.prev_module.x - self.y).T
@@ -128,7 +129,7 @@ class LinearModule(LearningModule):
     def bprop(self):
         self.dw = np.dot(self.next_module.dx.T, self.prev_module.x.T).T
         self.dx = np.dot(self.w.T, self.next_module.dx.T).T
-        assert(self.dw.shape == self.shape)
+        assert(self.dw.shape == self.shape[::-1])
         assert(self.dx.shape[1] == self.dim_in and self.dx.shape[0] == 1)
 
 class BiasModule(LearningModule):
