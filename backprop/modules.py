@@ -7,11 +7,10 @@ Modules to use to construct a learning machine
 
 from __future__ import division
 
-__all__ = ['LearningModule', 'InputModule', 'LinearModule', 'EuclideanModule',
-        'BiasModule', 'SigmoidModule']
+__all__ = ['LearningModule', 'InputModule', 'TestInputModule', 'LinearModule',
+        'EuclideanModule', 'BiasModule', 'SigmoidModule', 'SoftMaxModule']
 
 import numpy as np
-import numpy.linalg
 
 class LearningModule(object):
     """
@@ -68,14 +67,21 @@ class LearningModule(object):
         self.next_module.do_bprop()
         self.dy = self.next_module.dy
         self.bprop()
-        assert (self.w is None and self.dw is None) or self.dw.T.shape == self.w.shape, repr(self)
-        assert self.dx.shape == (1, self.dim_in), repr(self)
+        # assert (self.w is None and self.dw is None) or \
+        #         np.shape(self.dw.T) == np.shape(self.w), repr(self)
+        assert np.shape(self.dx) == (1, self.dim_in), repr(self)
 
     def fprop(self):
         pass
 
     def bprop(self):
         pass
+
+# ================= #
+#                   #
+#   INPUT MODULES   #
+#                   #
+# ================= #
 
 class InputModule(LearningModule):
     def __init__(self, dim_x, dim_y):
@@ -98,15 +104,21 @@ class InputModule(LearningModule):
         #       this converts the inputs to column vectors
         self.x, self.y = np.atleast_2d(x).T, np.atleast_2d(y).T
 
-class EuclideanModule(LearningModule):
-    def fprop(self):
-        assert(self.prev_module.x.shape == self.prev_module.y.shape)
-        self.losses = 0.5*(self.prev_module.x-self.prev_module.y)**2
-        self.x = np.sum(self.losses)
+class TestInputModule(InputModule):
+    def __init__(self, *args, **kwargs):
+        super(TestInputModule, self).__init__(*args, **kwargs)
+        self.y = np.zeros(self.dim_y)
+        self.y[np.random.randint(self.dim_y)] = 1
+        self.y = np.atleast_2d(self.y).T
 
-    def do_bprop(self):
-        self.dx = (self.prev_module.x - self.y).T
-        self.dy = -self.dx
+    def randomize(self, **kwargs):
+        self.x = np.atleast_2d(np.random.randn(self.dim_out)).T
+
+# ==================== #
+#                      #
+#   STANDARD MODULES   #
+#                      #
+# ==================== #
 
 class LinearModule(LearningModule):
     def __init__(self, *args, **kwargs):
@@ -150,18 +162,37 @@ class SigmoidModule(LearningModule):
         self.dx = self.next_module.dx/np.cosh(self.prev_module.x.T)**2
         assert(self.dx.shape == self.next_module.dx.shape)
 
-class SoftMax(LearningModule):
+class EuclideanModule(LearningModule):
+    def fprop(self):
+        assert(self.prev_module.x.shape == self.prev_module.y.shape)
+        self.losses = 0.5*(self.prev_module.x-self.prev_module.y)**2
+        self.x = np.sum(self.losses)
+
+    def do_bprop(self):
+        self.dx = (self.prev_module.x - self.y).T
+        self.dy = -self.dx
+
+# =============== #
+#                 #
+#   NEW MODULES   #
+#                 #
+# =============== #
+
+class SoftMaxModule(LearningModule):
     def randomize(self, **kwargs):
-        self.w = np.random.rand()
+        self.w = np.atleast_2d(np.random.rand())
 
     def fprop(self):
         self.x = np.exp(-self.w * self.prev_module.x)
         self.x /= np.sum(self.x)
 
     def bprop(self):
-        # (dX_out/dX_in)_k = beta * ( (X_{out,k})^2 - X_{out,k} )
-        # (dX_out/dbeta)_k = X_{in,k} . ( (X_{out,k})^2 - X_{out,k} )
-        delta = self.x**2-self.x
-        self.dx = self.w * delta
-        self.dw = np.dot( self.prev_module.x, delta )
+        delta = np.dot(self.x, self.x.T) - np.diagflat(self.x)
+        self.dx = self.w*np.sum(self.next_module.dx[0][:,None] * delta, axis=0)
+
+        # expectation value of X_in
+        xin = self.prev_module.x
+        p = np.exp(-self.w*xin)
+        mu = np.sum(xin*p)/np.sum(p)
+        self.dw = np.dot(self.next_module.dx, (self.x*mu - self.prev_module.x * self.x))
 
