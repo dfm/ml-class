@@ -32,11 +32,15 @@ class Tests:
         self.dim_out = self.dim_in
         self.do_module(SoftMaxModule)
 
-    def do_module(self, module, args=(), kwargs={}):
+    def do_module(self, module, args=(), kwargs={},
+            loss_module=None, loss_args=(), loss_kwargs={}):
         mods = [TestInputModule(self.dim_in, self.dim_out)]
         mods[0].randomize()
         mods.append(module(*args, prev_module=mods[-1], **kwargs))
-        mods.append(EuclideanModule(prev_module=mods[-1]))
+        if loss_module is None:
+            mods.append(EuclideanModule(prev_module=mods[-1]))
+        else:
+            mods.append(loss_module(*loss_args, prev_module=mods[-1], **loss_kwargs))
 
         mods[-1].do_fprop()
         mods[0].do_bprop()
