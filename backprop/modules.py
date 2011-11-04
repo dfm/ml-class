@@ -8,7 +8,8 @@ Modules to use to construct a learning machine
 from __future__ import division
 
 __all__ = ['LearningModule', 'InputModule', 'TestInputModule', 'LinearModule',
-        'EuclideanModule', 'BiasModule', 'SigmoidModule', 'SoftMaxModule']
+        'EuclideanModule', 'BiasModule', 'SigmoidModule', 'SoftMaxModule',
+        'CrossEntropyModule']
 
 import numpy as np
 
@@ -113,6 +114,7 @@ class TestInputModule(InputModule):
 
     def randomize(self, **kwargs):
         self.x = np.atleast_2d(np.random.randn(self.dim_out)).T
+        print self.x
 
 # ==================== #
 #                      #
@@ -195,4 +197,23 @@ class SoftMaxModule(LearningModule):
         p = np.exp(-self.w*xin)
         mu = np.sum(xin*p)/np.sum(p)
         self.dw = np.dot(self.next_module.dx, (self.x*mu - self.prev_module.x * self.x))
+
+class CrossEntropyModule(LearningModule):
+    def randomize(self):
+        pass
+
+    def fprop(self):
+        inds = self.prev_module.y > 0
+        self.losses = np.zeros(self.prev_module.x.shape)
+        self.losses[inds] = -np.log(self.prev_module.x[inds])
+        # self.losses[inds] = self.y[inds] * (np.log2(self.prev_module.y[inds]) \
+        #         - np.log2(self.prev_module.x[inds]))
+        # self.x = np.sum(- self.y[inds] *np.log2(self.prev_module.x[inds]))
+        self.x = np.sum(self.losses)
+
+    def do_bprop(self):
+        inds = self.prev_module.y > 0
+        self.dx = np.zeros(self.prev_module.x.T.shape)
+        self.dx[inds.T] = -(self.prev_module.y[inds]/self.prev_module.x[inds]).T
+        self.dy = -self.dx
 

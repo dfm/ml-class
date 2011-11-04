@@ -60,14 +60,32 @@ class Machine(object):
             if m.w is not None:
                 m.w -= eta*(m.dw.T + decay*m.w)
 
-    def train(self, eta=0.1, decay=0.0001):
+    def training_sweep(self, eta, decay):
         x, y = self._data.training_set
+        loss = 0.0
         for i in xrange(self._data.size_train):
             self.train_sample(x[i], y[i], eta, decay)
+            loss += self._modules[-1].x
+        return loss/self._data.size_train
+
+    def train(self, maxiter=100, tol=5.25e-3, eta=0.01, decay=0.0001):
+        loss0 = self.training_sweep(0.0, 0.0)
+
+        for i in xrange(maxiter):
+            loss = self.training_sweep(eta, decay)
+            print loss
+
+            # check for convergence
+            if i > 5 and np.abs((loss-loss0)/loss) < tol:
+                break
+            loss0 = loss
+        else:
+            print "Warning: convergence criterion wasn't met after %d iterations"\
+                    %maxiter
 
     def test_sample(self, sample, label):
-        self.run(sample, label)
-        losses = self._modules[-1].losses.T[0]
+        self.run(sample, np.ones(label.shape, dtype=int))
+        losses = self._modules[-1].losses.flatten()
         error  = losses[label==1] != np.min(losses)
         return self._modules[-1].x, error[0]
 

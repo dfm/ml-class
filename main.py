@@ -14,18 +14,24 @@ from backprop import Machine, modules
 from dataset import Dataset
 
 data = Dataset('dataset/isolet1+2+3+4.data', test_fn='dataset/isolet5.data')
+# data = Dataset('dataset/spambase.data')
 
 def single_layer_test():
     mach = Machine(data)
-    mach.add_module(modules.LinearModule, kwargs={'dim_out': data.nclass})
+
+    mach.add_module(modules.LinearModule, kwargs={'dim_out': 80})
     mach.add_module(modules.BiasModule)
     mach.add_module(modules.SigmoidModule)
-    mach.add_module(modules.EuclideanModule)
+
+    mach.add_module(modules.LinearModule, kwargs={'dim_out': data.nclass})
+    mach.add_module(modules.BiasModule)
+    mach.add_module(modules.SoftMaxModule)
+
+    mach.add_module(modules.CrossEntropyModule)
 
     print mach.test()
-    for i in range(100):
-        mach.train()
-        print mach.test(), mach.test(training_set=True)
+    mach.train()
+    print mach.test(), mach.test(training_set=True)
 
 if __name__ == '__main__':
     single_layer_test()
