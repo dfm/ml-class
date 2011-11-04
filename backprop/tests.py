@@ -11,10 +11,10 @@ from modules import *
 
 class Tests:
     def setUp(self):
-        self.dim_in  = 10
-        self.dim_out = 15
+        self.dim_in  = 5
+        self.dim_out = 3
 
-        self.dx      = 1e-8
+        self.dx      = 1e-7
         self.dw      = 1e-7
 
     def test_linear_module(self):
