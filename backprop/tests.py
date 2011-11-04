@@ -11,7 +11,7 @@ from modules import *
 
 class Tests:
     def setUp(self):
-        self.dim_in  = 5
+        self.dim_in  = 20
         self.dim_out = 3
 
         self.dx      = 1e-7
@@ -46,6 +46,9 @@ class Tests:
         mods[0].randomize()
         if module is not None:
             mods.append(module(*args, prev_module=mods[-1], **kwargs))
+        else:
+            mods[0].x = np.abs(mods[0].x)
+            mods[0].x /= np.sum(mods[0].x)
         if loss_module is None:
             mods.append(EuclideanModule(prev_module=mods[-1]))
         else:

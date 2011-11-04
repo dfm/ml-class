@@ -114,7 +114,6 @@ class TestInputModule(InputModule):
 
     def randomize(self, **kwargs):
         self.x = np.atleast_2d(np.random.randn(self.dim_out)).T
-        print self.x
 
 # ==================== #
 #                      #
