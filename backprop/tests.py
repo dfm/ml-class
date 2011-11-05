@@ -11,7 +11,7 @@ from modules import *
 
 class Tests:
     def setUp(self):
-        self.dim_in  = 20
+        self.dim_in  = 50
         self.dim_out = 3
 
         self.dx      = 1e-7
@@ -36,9 +36,14 @@ class Tests:
         self.dim_out = self.dim_in
         self.do_module()
 
-    def test_cross_entropy(self):
+    def test_cross_entropy_module(self):
         self.dim_out = self.dim_in
         self.do_module(loss_module=CrossEntropyModule)
+
+    def test_rbf_module(self):
+        templates = np.random.randn(self.dim_out*self.dim_in).reshape(self.dim_in, self.dim_out)
+        self.dx, self.dw = 1e-4, 1e-4
+        self.do_module(RBFModule, args=[templates])
 
     def do_module(self, module=None, args=(), kwargs={},
             loss_module=None, loss_args=(), loss_kwargs={}):
@@ -74,7 +79,7 @@ class Tests:
 
             dEdx[i] = (E2-E1)/(2.0*self.dx)
 
-        assert np.sum(np.abs(dEdx0-dEdx))/self.dim_in < self.dx, \
+        assert np.sum(np.abs(dEdx0-dEdx))/self.dim_in < 10*self.dx, \
                 "backprop to X_in fails for %s"%(repr(mods[1]))
 
         if mods[1].dw is not None:
@@ -96,13 +101,14 @@ class Tests:
 
             dEdW = dEdW.T
 
-            assert np.sum(np.abs(dEdW0-dEdW))/N < self.dx, \
+            assert np.sum(np.abs(dEdW0-dEdW))/N < 10*self.dx, \
                 "backprop to W fails for %s"%(repr(module))
 
 if __name__ == '__main__':
     tests = Tests()
     tests.setUp()
-    tests.test_cross_entropy()
+    tests.test_rbf_module()
+    tests.test_cross_entropy_module()
     tests.test_linear_module()
     tests.test_sigmoid_module()
     tests.test_bias_module()

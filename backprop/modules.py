@@ -9,7 +9,7 @@ from __future__ import division
 
 __all__ = ['LearningModule', 'InputModule', 'TestInputModule', 'LinearModule',
         'EuclideanModule', 'BiasModule', 'SigmoidModule', 'SoftMaxModule',
-        'CrossEntropyModule']
+        'CrossEntropyModule', 'RBFModule']
 
 import numpy as np
 
@@ -23,12 +23,16 @@ class LearningModule(object):
         The module that connects to this one
 
     """
-    def __init__(self, prev_module=None, dim_out=None, dim_in=None):
-        self.prev_module = prev_module
+    def __init__(self, *args, **kwargs):
+        dim_out, dim_in = kwargs.pop('dim_out',None), kwargs.pop('dim_in',None)
+        self.prev_module = kwargs.pop('prev_module', None)
+        if self.prev_module is None and len(args) >= 1:
+            self.prev_module = args[0]
         self.next_module = None
 
-        if prev_module is not None:
-            # the input dimensions will be set by the previous module's output dimensions
+        if self.prev_module is not None:
+            # the input dimensions will be set by the previous module's
+            # output dimensions
             self.dim_in = self.prev_module.dim_out
             if dim_in is not None:
                 assert(dim_in == self.dim_in)
@@ -41,7 +45,7 @@ class LearningModule(object):
         else:
             self.dim_out = self.dim_in
 
-        if prev_module is not None:
+        if self.prev_module is not None:
             # connect the previous module
             self.prev_module.connect_module(self)
 
@@ -68,8 +72,8 @@ class LearningModule(object):
         self.next_module.do_bprop()
         self.dy = self.next_module.dy
         self.bprop()
-        # assert (self.w is None and self.dw is None) or \
-        #         np.shape(self.dw.T) == np.shape(self.w), repr(self)
+        assert (self.w is None and self.dw is None) or \
+                np.shape(self.dw.T) == np.shape(self.w), repr(self)
         assert np.shape(self.dx) == (1, self.dim_in), repr(self)
 
     def fprop(self):
@@ -195,7 +199,8 @@ class SoftMaxModule(LearningModule):
         xin = self.prev_module.x
         p = np.exp(-self.w*xin)
         mu = np.sum(xin*p)/np.sum(p)
-        self.dw = np.dot(self.next_module.dx, (self.x*mu - self.prev_module.x * self.x))
+        self.dw = np.dot(self.next_module.dx, \
+                (self.x*mu - self.prev_module.x * self.x))
 
 class CrossEntropyModule(LearningModule):
     def randomize(self):
@@ -204,15 +209,29 @@ class CrossEntropyModule(LearningModule):
     def fprop(self):
         inds = self.prev_module.y > 0
         self.losses = np.zeros(self.prev_module.x.shape)
-        self.losses[inds] = -np.log(self.prev_module.x[inds])
-        # self.losses[inds] = self.y[inds] * (np.log2(self.prev_module.y[inds]) \
-        #         - np.log2(self.prev_module.x[inds]))
-        # self.x = np.sum(- self.y[inds] *np.log2(self.prev_module.x[inds]))
+        self.losses[inds] = -np.log2(self.prev_module.x[inds])
         self.x = np.sum(self.losses)
 
     def do_bprop(self):
-        inds = self.prev_module.y > 0
+        inds = self.prev_module.y.T > 0
         self.dx = np.zeros(self.prev_module.x.T.shape)
-        self.dx[inds.T] = -(self.prev_module.y[inds]/self.prev_module.x[inds]).T
-        self.dy = -self.dx
+        self.dx[inds] = -(self.prev_module.y[inds.T] \
+                / self.prev_module.x[inds.T]).T/np.log(2)
+        self.dy = np.zeros(self.dx.shape)
+        self.dy[inds] = -np.log(self.prev_module.x[inds.T])
+
+class RBFModule(LearningModule):
+    def __init__(self, templates, *args, **kwargs):
+        super(RBFModule, self).__init__(*args, **kwargs)
+        self.w = templates
+        self.dim_out = templates.shape[1]
+        assert(self.dim_in == templates.shape[0])
+
+    def fprop(self):
+        self.x = np.atleast_2d(0.5*np.sum((self.prev_module.x-self.w)**2, \
+                                             axis=0)).T
+
+    def bprop(self):
+        self.dw = (self.next_module.dx*(self.w-self.prev_module.x)).T
+        self.dx = -np.atleast_2d(np.sum(self.dw, axis=0))
 
