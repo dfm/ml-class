@@ -8,31 +8,77 @@ Most of the skeleton code has been loosely "ported" from the provided LUSH code.
 
 """
 
-import numpy as np
+import sys
 
 from backprop import Machine, modules
 from dataset import Dataset
 
-data = Dataset('dataset/isolet1+2+3+4.data', test_fn='dataset/isolet5.data')
+data = None
 # data = Dataset('dataset/spambase.data')
 
-def single_layer_test():
+def run_machine(mach, **kwargs):
+    N = mach.nparams
+    print "Running machine w/ architecture"
+    print "\t", mach
+    print "and %d parameters"%(N)
+    print "Initial L = %.4f, f_error = %.4f on training set"%(mach.test(training_set=True))
+    print "Initial L = %.4f, f_error = %.4f on test set"%(mach.test())
+    mach.train(**kwargs)
+    print "Final L = %.4f, f_error = %.4f on training set"%(mach.test(training_set=True))
+    testing = mach.test()
+    print "Final L = %.4f, f_error = %.4f on test set\n"%(testing)
+    f = open('results.dat', 'a')
+    f.write("%d %.4f\n"%(N,testing[1]))
+    f.close()
+
+def logistic_regression():
     mach = Machine(data)
 
-    mach.add_module(modules.LinearModule, kwargs={'dim_out': 80})
+    mach.add_module(modules.LinearModule, kwargs={'dim_out': data.nclass})
+    mach.add_module(modules.BiasModule)
+    mach.add_module(modules.SigmoidModule)
+    mach.add_module(modules.EuclideanModule)
+
+    run_machine(mach, eta=0.0025, decay=0.0025, tol=5.25e-5)
+
+def single_layer():
+    mach = Machine(data)
+
+    mach.add_module(modules.LinearModule, kwargs={'dim_out': data.nclass})
+    mach.add_module(modules.BiasModule)
+    mach.add_module(modules.SoftMaxModule)
+    mach.add_module(modules.CrossEntropyModule)
+
+    run_machine(mach, eta=0.001, decay=0.0001, tol=1.25e-2)
+
+def double_layer(nhidden=80, eta=0.001, decay=0.0001, tol=1.25e-2):
+    mach = Machine(data)
+
+    mach.add_module(modules.LinearModule, kwargs={'dim_out': nhidden})
     mach.add_module(modules.BiasModule)
     mach.add_module(modules.SigmoidModule)
 
     mach.add_module(modules.LinearModule, kwargs={'dim_out': data.nclass})
     mach.add_module(modules.BiasModule)
     mach.add_module(modules.SoftMaxModule)
-
     mach.add_module(modules.CrossEntropyModule)
 
-    print mach.test()
-    mach.train()
-    print mach.test(), mach.test(training_set=True)
+    run_machine(mach, eta=eta, decay=decay, tol=tol)
 
 if __name__ == '__main__':
-    single_layer_test()
+    N = 1
+    if len(sys.argv) > 1:
+        N = int(sys.argv[1])
+
+    for i in range(N):
+        print "trial %d"%i
+        data = Dataset('dataset/isolet1+2+3+4.data', test_fn='dataset/isolet5.data',
+            train=4000, test=1000)
+
+        logistic_regression()
+        single_layer()
+        double_layer(nhidden=10)
+        double_layer(nhidden=20)
+        double_layer(nhidden=40)
+        double_layer(nhidden=80)
 

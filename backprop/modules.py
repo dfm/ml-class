@@ -19,8 +19,14 @@ class LearningModule(object):
 
     Parameters
     ----------
-    prev_modules : LearningModule
+    prev_module : LearningModule
         The module that connects to this one
+
+    dim_in : int, optional
+        The dimension of the input. Defaults to the output dimension of prev_module
+
+    dim_out : int, optional
+        The output dimension. Defaults to dim_in
 
     """
     def __init__(self, *args, **kwargs):
@@ -56,30 +62,72 @@ class LearningModule(object):
 
         self.randomize()
 
+    def __str__(self):
+        return type(self).__name__[:-6]
+
     def randomize(self, **kwargs):
+        """
+        Randomize the weight vector
+
+        This is an abstract baseclass that subclasses should override.
+
+        """
         pass
 
     def connect_module(self, next_module):
+        """
+        Connect the module that will come next in the NN chain
+
+        A pointer to this module is saved as self.next_module.
+
+        Parameters
+        ----------
+        next_module : LearningModule
+            The next module in the chain
+
+        """
         assert(self.dim_out == next_module.dim_in)
         self.next_module = next_module
 
     def do_fprop(self):
+        """
+        Perform forward propagation
+
+        Subclasses should override fprop NOT do_fprop (except loss modules).
+
+        """
         self.prev_module.do_fprop()
         self.y = self.prev_module.y
         self.fprop()
 
     def do_bprop(self):
+        """
+        Perform back propagation
+
+        Subclasses should override bprop NOT do_bprop (except input modules).
+
+        """
         self.next_module.do_bprop()
         self.dy = self.next_module.dy
         self.bprop()
+
+        # do some basic checks of the dimensions
         assert (self.w is None and self.dw is None) or \
                 np.shape(self.dw.T) == np.shape(self.w), repr(self)
         assert np.shape(self.dx) == (1, self.dim_in), repr(self)
 
     def fprop(self):
+        """
+        Abstract forward propagation method, overridden by subclasses
+
+        """
         pass
 
     def bprop(self):
+        """
+        Abstract back propagation method, overridden by subclasses
+
+        """
         pass
 
 # ================= #
@@ -89,6 +137,18 @@ class LearningModule(object):
 # ================= #
 
 class InputModule(LearningModule):
+    """
+    The base node in a NN chain
+
+    Parameters
+    ----------
+    dim_x : int
+        The dimension of the input vectors
+
+    dim_y : int
+        The dimension of the target vectors
+
+    """
     def __init__(self, dim_x, dim_y):
         self.dim_out = dim_x
         self.dim_y   = dim_y
@@ -105,8 +165,7 @@ class InputModule(LearningModule):
         return self.x, self.y
 
     def set_current_sample(self, x, y):
-        # NOTE: this only works when x and y are 0 or 1-D arrays (not 2-D)
-        #       this converts the inputs to column vectors
+        # NOTE: this converts the inputs to column vectors
         self.x, self.y = np.atleast_2d(x).T, np.atleast_2d(y).T
 
 class TestInputModule(InputModule):
@@ -129,6 +188,9 @@ class LinearModule(LearningModule):
     def __init__(self, *args, **kwargs):
         super(LinearModule, self).__init__(*args, **kwargs)
         self.x = np.zeros((self.dim_out, 1))
+
+    def __str__(self):
+        return "%s(%d)"%(type(self).__name__[:-6], self.dim_out)
 
     def randomize(self, **kwargs):
         kz = kwargs.pop('k', 1.0)/np.sqrt(self.dim_in)
@@ -171,7 +233,8 @@ class EuclideanModule(LearningModule):
     def fprop(self):
         assert(self.prev_module.x.shape == self.prev_module.y.shape)
         self.losses = 0.5*(self.prev_module.x-self.prev_module.y)**2
-        self.x = np.sum(self.losses)
+        self.x = np.sum(self.losses.flatten())
+        #print self.x
 
     def do_bprop(self):
         self.dx = (self.prev_module.x - self.y).T
@@ -203,9 +266,15 @@ class SoftMaxModule(LearningModule):
                 (self.x*mu - self.prev_module.x * self.x))
 
 class CrossEntropyModule(LearningModule):
-    def randomize(self):
-        pass
+    """
+    Cacluate the KL divergence between the input vector and the desired classification
 
+    NOTE: this should return
+        L = SUM_k Y_k log_2 ( Y_k / X_k )
+    but for this assignment Y_k is always either 1 or 0, I can simply return
+        L = - SUM_k Y_k log_2 ( X_k )
+
+    """
     def fprop(self):
         inds = self.prev_module.y > 0
         self.losses = np.zeros(self.prev_module.x.shape)
@@ -221,11 +290,23 @@ class CrossEntropyModule(LearningModule):
         self.dy[inds] = -np.log(self.prev_module.x[inds.T])
 
 class RBFModule(LearningModule):
+    """
+    The RBF module
+
+    Parameters
+    ----------
+    templates : numpy.ndarray (N_{dim}, N_{templates})
+        The matrix of templates for initialization
+
+    """
     def __init__(self, templates, *args, **kwargs):
         super(RBFModule, self).__init__(*args, **kwargs)
         self.w = templates
         self.dim_out = templates.shape[1]
         assert(self.dim_in == templates.shape[0])
+
+    def __str__(self):
+        return "%s(%d)"%(type(self).__name__[:-6], self.dim_out)
 
     def fprop(self):
         self.x = np.atleast_2d(0.5*np.sum((self.prev_module.x-self.w)**2, \

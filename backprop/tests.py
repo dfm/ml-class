@@ -79,8 +79,8 @@ class Tests:
 
             dEdx[i] = (E2-E1)/(2.0*self.dx)
 
-        assert np.sum(np.abs(dEdx0-dEdx))/self.dim_in < 10*self.dx, \
-                "backprop to X_in fails for %s"%(repr(mods[1]))
+        assert np.sum(np.abs(dEdx0-dEdx))/self.dim_in < self.dx, \
+                "backprop to X_in fails for %s"%(str(mods[1]))
 
         if mods[1].dw is not None:
             shape = np.shape(dEdW0)
@@ -101,8 +101,8 @@ class Tests:
 
             dEdW = dEdW.T
 
-            assert np.sum(np.abs(dEdW0-dEdW))/N < 10*self.dx, \
-                "backprop to W fails for %s"%(repr(module))
+            assert np.sum(np.abs(dEdW0-dEdW))/N < self.dx, \
+                "backprop to W fails for %s"%(str(module))
 
 if __name__ == '__main__':
     tests = Tests()

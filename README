@@ -4,5 +4,105 @@
 *  Daniel Foreman-Mackey --- danfm@nyu.edu  *
 =============================================
 
+Implementation Notes
+--------------------
 
+The backprop module contains the main code for this assignment.  The basic code
+for constructing, training and testing a "Machine" (roughly the equivalent of a
+"trainer" in the LUSH skeleton code) is implemented in backprop/backprop.py.
+The learning modules are implemented in backprop/modules.py as subclasses of the
+abstract LearningModule class.  There is also a test suite provided in
+backprop/tests.py that can be run as
+
+    % python backprop/tests.py
+
+or using the python unit testing framework nose (http://readthedocs.org/docs/nose)
+by running
+
+    % nosetests
+
+in the main directory.  These tests are described later in this document.
+
+The dataset used for the experiments in this assignment is found in the dataset
+module.  The raw data is found in dataset/isolet*.data and the Python object that
+loads, preprocess and wraps the data is implenented in dataset/dataset.py.
+
+Finally, the required experiments are implemented in main.py and can be run as
+
+    % python main.py
+
+
+Unit Tests
+----------
+
+To numerically test the back-propagation method for a general module
+    X_{out} = F(X_{in} | W),
+we can set up a simple machine:
+
+        L
+        ^
+        |
+     ------
+    | LOSS |
+     ------
+        |
+     ---------------
+    | F(X_{in} | W) |
+     ---------------
+        |
+     -----------
+    | TestInput |
+     -----------
+
+Where the TestInput generates a random dataset { X_{in}, Y }.  Then, we can
+place a constraint on the difference between the back-propagated dL/dX_{in} and
+the component-wise centered finite-difference calculation of the same gradient.
+The finite-difference measurement of (dL/dX_{in})_k is
+
+    [ L ( F(X_{in} + dX_{k} | W), Y ) - L ( F(X_{in} - dX_{k} | W), Y ) ] / (2 delta)
+
+where dX_{k} is zero everywhere except in the k-th element where it has some small
+non-zero value, delta.  A similar procedure is applied to approximate dL/dW_{j}
+varying W with a vector dW_{j} = [0, ... delta, ..., 0].
+
+Empirically, I found that reasonable constraints on the L1 norms of the derivatives
+were
+
+    1/N || (dL/dX_{in})_bprop - (dL/dX_{in})_fdiff || < delta
+
+and
+
+    1/N || (dL/dW)_bprop - (dL/dW)_fdiff || < delta
+
+These tests are implemented in backprop/tests.py.
+
+
+Experiments
+-----------
+
+The required experiments are implemented in main.py.  Each experiment appends a
+row to the file results.dat with the number of parameters in the first column and
+the fractional test error in the second column.  To Monte Carlo the experiments
+to estimate the mean and variance of the test error for a given experiment, you
+can run something like
+
+    % python main.py 50
+
+which will run each experiment 50 times and aggregate the results in results.dat.
+
+The experiments implemented in main.py are:
+
+    1. Logistic regression (linear->bias->sigmoid->Euclidean)
+    2. Single-layer (linear->bias->soft-max->cross-entropy)
+    3. Double-layer (linear->bias->sigmoid->linear->bias->soft-max->cross-entropy)
+       with 10, 20, 40 and 80 hidden units.
+
+The results of a 50 sample Monte Carlo are given in results.dat and plotted in
+results.png.  Since the fractional error for logistic regression is much worse
+than for the other networks, a scaled version of results.png is given in
+results_scaled.png.  In both of these figures, the horizontal blue line indicates
+a fractional error of 5%.  This shows that either the double-layer network with 40
+or 80 hidden units or (surprisingly) the single layer soft-max network will
+consistently provide <5% test error.  The code to generate these figures is in
+plots.py.
 

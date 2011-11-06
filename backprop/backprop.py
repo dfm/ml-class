@@ -9,6 +9,9 @@ from __future__ import division
 
 __all__ = ['Machine']
 
+import os
+import sys
+
 import numpy as np
 from modules import InputModule
 
@@ -45,16 +48,17 @@ class Machine(object):
         self._data = data
         self._modules = [InputModule(data.nvariables, data.nclass)]
 
+    def __str__(self):
+        r = ">".join([str(m) for m in self._modules])
+        return r
+
     def add_module(self, module, args=(), kwargs={}):
         self._modules.append(module(*args, prev_module=self._modules[-1], **kwargs))
 
-    def run(self, sample, label):
+    def train_sample(self, sample, label, eta, decay):
         self._modules[0].set_current_sample(sample, label)
         self._modules[-1].do_fprop()
         self._modules[0].do_bprop()
-
-    def train_sample(self, sample, label, eta, decay):
-        self.run(sample, label)
 
         for m in self._modules:
             if m.w is not None:
@@ -68,25 +72,41 @@ class Machine(object):
             loss += self._modules[-1].x
         return loss/self._data.size_train
 
-    def train(self, maxiter=100, tol=5.25e-3, eta=0.01, decay=0.0001):
-        loss0 = self.training_sweep(0.0, 0.0)
-
+    def train(self, maxiter=100, miniter=5, tol=5.25e-5, eta=0.1, decay=0.0001):
+        loss0 = 0.0
+        msg = ""
         for i in xrange(maxiter):
             loss = self.training_sweep(eta, decay)
-            print loss
+            sys.stdout.write("\b"*len(msg))
+            msg = "."*i + " L = %.4e"%(loss)
+            sys.stdout.write(msg)
+            sys.stdout.flush()
 
             # check for convergence
-            if i > 5 and np.abs((loss-loss0)/loss) < tol:
+            diff = np.abs((loss-loss0)/loss)
+            if i > miniter and diff < tol:
+                print
+                print "converged after %d iterations"%i
                 break
             loss0 = loss
         else:
-            print "Warning: convergence criterion wasn't met after %d iterations"\
+            print
+            print "Warning: convergence criterion (%.4e < %.4e)"%(diff,tol)+\
+                    " wasn't met after %d iterations"\
                     %maxiter
 
     def test_sample(self, sample, label):
-        self.run(sample, np.ones(label.shape, dtype=int))
+        # try to classify the sample
+        self._modules[0].set_current_sample(sample, np.ones(label.shape, dtype=int))
+        self._modules[-1].do_fprop()
+
         losses = self._modules[-1].losses.flatten()
         error  = losses[label==1] != np.min(losses)
+
+        # now get the loss given the _correct_ classification
+        self._modules[0].set_current_sample(sample, label)
+        self._modules[-1].do_fprop()
+
         return self._modules[-1].x, error[0]
 
     def test(self, training_set=False):
@@ -102,4 +122,12 @@ class Machine(object):
             tot_loss += loss
             tot_err  += error
         return tot_loss/N, tot_err/N
+
+    @property
+    def nparams(self):
+        n = 0
+        for m in self._modules:
+            if m.w is not None:
+                n += np.prod(m.w.shape)
+        return n
 
