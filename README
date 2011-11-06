@@ -4,6 +4,8 @@
 *  Daniel Foreman-Mackey --- danfm@nyu.edu  *
 =============================================
 
+NOTE: again, I implemented my assignment in Python and it depends on NumPy.
+
 Implementation Notes
 --------------------
 
@@ -110,5 +112,18 @@ plots.py.
 Optional Experiments
 --------------------
 
+I also implemented the extended architectures:
 
+    1. Triple-layer (linear->bias->sigmoid->linear->bias->sigmoid->
+                                linear->bias->soft-max->cross-entropy)
+    2. RBF hybrid (linear->bias->sigmoid->RBF->bias->sift-max->cross-entropy)
+    3. SVM-like (RBF->neg-exp->linear->bias->soft-max->cross-entropy)
+
+Both the triple-layer and RBF hybrid nets had similar (<5% test error)
+performance to the double-layer but not consistently better.  Despite significant
+experimentation, I was unable to get the SVM-like architecture to work at all!
+
+These optional architectures can be run using
+
+    % python main.py --optional
 

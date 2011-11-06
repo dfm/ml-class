@@ -68,6 +68,24 @@ def double_layer(nhidden=80, eta=0.001, decay=0.0001, tol=1.25e-2):
 
     run_machine(mach, eta=eta, decay=decay, tol=tol)
 
+def triple_layer(nhidden=80, eta=0.001, decay=0.0001, tol=1.25e-2):
+    mach = Machine(data)
+
+    mach.add_module(modules.LinearModule, kwargs={'dim_out': nhidden})
+    mach.add_module(modules.BiasModule)
+    mach.add_module(modules.SigmoidModule)
+
+    mach.add_module(modules.LinearModule, kwargs={'dim_out': nhidden})
+    mach.add_module(modules.BiasModule)
+    mach.add_module(modules.SigmoidModule)
+
+    mach.add_module(modules.LinearModule, kwargs={'dim_out': data.nclass})
+    mach.add_module(modules.BiasModule)
+    mach.add_module(modules.SoftMaxModule)
+    mach.add_module(modules.CrossEntropyModule)
+
+    run_machine(mach, eta=eta, decay=decay, tol=tol)
+
 def rbf_hybrid(nhidden=80, eta=0.001, decay=0.0001, tol=1.25e-2):
     templates = np.random.randn(nhidden*data.nclass).reshape(nhidden, data.nclass)
 
@@ -84,11 +102,23 @@ def rbf_hybrid(nhidden=80, eta=0.001, decay=0.0001, tol=1.25e-2):
 
     run_machine(mach, save=False, eta=eta, decay=decay, tol=tol)
 
+def svm(nhidden=30, eta=0.001, decay=0.001, tol=1.25e-4):
+    templates = data.training_set[0][np.random.randint(data.size_train, size=nhidden),:].T
+    mach = Machine(data)
+    mach.add_module(modules.RBFModule, args=[templates])
+    mach.add_module(modules.SoftMaxModule)
+    mach.add_module(modules.LinearModule, kwargs={'dim_out': data.nclass})
+    mach.add_module(modules.BiasModule)
+    mach.add_module(modules.SoftMaxModule)
+    mach.add_module(modules.CrossEntropyModule)
+
+    run_machine(mach, save=False, eta=eta, decay=decay, tol=tol)
 
 if __name__ == '__main__':
     if '--optional' in sys.argv:
         data = Dataset('dataset/isolet1+2+3+4.data', test_fn='dataset/isolet5.data',
             train=4000, test=1000)
+        triple_layer(nhidden=40)
         rbf_hybrid()
     else:
         N = 1
