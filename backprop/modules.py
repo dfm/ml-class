@@ -9,7 +9,7 @@ from __future__ import division
 
 __all__ = ['LearningModule', 'InputModule', 'TestInputModule', 'LinearModule',
         'EuclideanModule', 'BiasModule', 'SigmoidModule', 'SoftMaxModule',
-        'CrossEntropyModule', 'RBFModule']
+        'CrossEntropyModule', 'RBFModule', 'NegExpModule']
 
 import numpy as np
 
@@ -315,4 +315,15 @@ class RBFModule(LearningModule):
     def bprop(self):
         self.dw = (self.next_module.dx*(self.w-self.prev_module.x)).T
         self.dx = -np.atleast_2d(np.sum(self.dw, axis=0))
+
+class NegExpModule(LearningModule):
+    def randomize(self, **kwargs):
+        self.w = np.atleast_2d(np.random.rand())
+
+    def fprop(self):
+        self.x = np.exp(-self.w * self.prev_module.x)
+
+    def bprop(self):
+        self.dx = -self.w * self.next_module.dx * self.x.T
+        self.dw = -np.dot(self.next_module.dx, self.prev_module.x * self.x)
 

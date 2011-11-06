@@ -106,3 +106,9 @@ or 80 hidden units or (surprisingly) the single layer soft-max network will
 consistently provide <5% test error.  The code to generate these figures is in
 plots.py.
 
+
+Optional Experiments
+--------------------
+
+
+
