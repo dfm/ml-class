@@ -94,6 +94,9 @@ class Dataset(object):
             # load test data
             test_data = np.array([line.split(',') for line in open(test_fn)],
                     dtype=float)
+            if shuffle:
+                np.random.shuffle(test_data)
+
             if test is None:
                 self.size_test = test_data.shape[0]
             self._inputs_test, self._outputs_test, \
