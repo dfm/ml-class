@@ -142,10 +142,16 @@ class MixtureModel(object):
         self._means = np.sum(self._rs[:,None,:] * self._data[:,:,None], axis=0)
         self._means /= Nk[None,:]
         self._cov = []
+        Cprior = np.cov(data,rowvar=0)
         for k in range(self._K):
             # D.shape == (P,D)
             D = self._data - self._means[None,:,k]
-            self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k])
+            # FIXME: bogus crap
+            self._cov.append(\
+                    (np.dot(D.T, self._rs[:,k,None]*D) \
+                    + Cprior)/(Nk[k]+1) \
+                    )
+            # self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k])
         self._as = Nk/self._data.shape[0]
 
     def _calc_prob(self, x):
@@ -158,6 +164,12 @@ class MixtureModel(object):
 
     def lnprob(self, x):
         return self._calc_prob(x)[0]
+
+    def sample(self,N):
+        samples = np.vstack(
+                [np.random.multivariate_normal(self.means[k], self._cov[k],
+                    size=int(self._as[k]*(N+1))) for k in range(self._K)])
+        return samples[:N,:]
 
 if __name__ == '__main__':
     import matplotlib
@@ -180,19 +192,13 @@ if __name__ == '__main__':
             np.random.multivariate_normal(means[i], covariances[i], size=factor*amplitudes[i])])
     data = data[1:,:]
 
-    kmeans = MixtureModel(len(means), data)
+    kmeans = MixtureModel(3, data)
     kmeans.run_kmeans()
     kmeans.run_em()
 
-    print means
-    print kmeans.means
-    print covariances
-    print kmeans._cov
-    print np.array(amplitudes)/np.sum(amplitudes)
-    print kmeans._as
+    samples = kmeans.sample(50000)
 
-    print kmeans.lnprob([[2.1, 2.5],[0.1,5.2]])
-
+    pl.plot(samples[:,0], samples[:,1], '.k', zorder=-1, ms=2)
     pl.scatter(data[:,0], data[:,1], marker='o',
             c=[tuple(kmeans._rs[i,:]) for i in range(data.shape[0])],
             s=8., edgecolor='none')
@@ -203,9 +209,9 @@ if __name__ == '__main__':
         theta = np.degrees(np.arctan2(U[1,0], U[0,0]))
         ellipsePlot = Ellipse(xy=[x,y], width=2*np.sqrt(S[0]),
             height=2*np.sqrt(S[1]), angle=theta,
-            facecolor='none', edgecolor='k',lw=2)
+            facecolor='none', edgecolor='w',lw=2)
         ax = pl.gca()
-        ax.add_patch(ellipsePlot);
+        ax.add_patch(ellipsePlot)
 
 
     pl.savefig('test.png')
