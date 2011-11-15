@@ -25,12 +25,16 @@ class MixtureModel(object):
     means -> (D, K)
 
     """
-    def __init__(self, K, data):
+    def __init__(self, K, data, init_grid=False):
         self._K    = K
         self._data = np.atleast_2d(data)
         self._lu   = None
 
-        self._means = data[np.random.randint(data.shape[0],size=self._K),:]
+        if init_grid:
+            inds = np.array(np.linspace(0, data.shape[0]-1, self._K), dtype=int)
+        else:
+            inds = np.random.randint(data.shape[0],size=self._K)
+        self._means = data[inds,:]
         self._cov   = [np.cov(data,rowvar=0)]*self._K
         self._as    = np.random.rand(K)
         self._as /= np.sum(self._as)
@@ -55,6 +59,15 @@ class MixtureModel(object):
         self._kmeans_rs = np.zeros(self._data.shape[0], dtype=int)
         _algorithms.kmeans(self._data, self._means, self._kmeans_rs, tol, maxiter)
 
+    def get_hist(self):
+        h = np.array([np.sum(self._kmeans_rs == k) for k in range(self._K)])
+        return h/np.sum(h)
+
+    def get_entropy(self):
+        h = self.get_hist()
+        inds = h > 0
+        return -np.sum(h[inds]*np.log2(h[inds]))
+
     # ============ #
     # EM Algorithm #
     # ============ #
@@ -68,6 +81,7 @@ class MixtureModel(object):
         L = None
         for i in xrange(maxiter):
             newL = self._expectation()
+            print -newL
             self._maximization()
             if L is None:
                 L = newL

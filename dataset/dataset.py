@@ -22,8 +22,9 @@ class ImageDataset(object):
         img = Image.open(fn)
         self.shape = img.size[::-1] # PIL uses transposed shape
         self.data  = np.array(img.getdata()).reshape(self.shape)
-        tile_size = np.prod(tile_shape)
-        self.tiles = np.zeros((np.prod(self.shape)/tile_size, tile_size), dtype=int)
+        self.tile_size = np.prod(tile_shape)
+        self.ntiles = np.prod(self.shape)/self.tile_size
+        self.tiles = np.zeros((self.ntiles, self.tile_size), dtype=int)
         to_tiles(self.data, self.tiles, tile_shape)
 
 if __name__ == '__main__':
