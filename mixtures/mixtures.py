@@ -60,44 +60,6 @@ class MixtureModel(object):
         _algorithms.kmeans(self._data, means, self._kmeans_rs, tol, maxiter)
         self._means = means.T
 
-    def run_kmeans_slow(self, maxiter=200, tol=1e-8, verbose=True):
-        """
-        Fit the given data using K-means
-
-        """
-        L = None
-        for i in xrange(maxiter):
-            newL = self._update_kmeans()
-            if L is None:
-                L = newL
-            else:
-                dL = np.abs((newL-L)/newL)
-                print dL
-                if dL < tol:
-                    break
-                L = newL
-        if i < maxiter-1:
-            if verbose:
-                print "K-Means converged after %d iterations"%(i)
-        else:
-            raise KMeansConvergenceError("K-means didn't converge")
-
-    def _update_kmeans(self):
-        # dists.shape == (P,K)
-        dists = np.sum((self._data[:,:,None] - self._means[None,:,:])**2, axis=1)
-        print dists
-
-        # rs.shape == (P,K)
-        rs = dists == np.min(dists,axis=1)[:,None]
-        self._kmeans_rs = rs
-
-        # self._means.shape == (D,K)
-        self._means =  np.sum(rs[:,None,:] * self._data[:,:,None], axis=0)
-        self._means /= np.sum(rs, axis=0)
-
-        L = np.sum(rs*dists)
-        return L
-
     # ============ #
     # EM Algorithm #
     # ============ #
