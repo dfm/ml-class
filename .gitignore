@@ -3,5 +3,6 @@
 *.so
 .DS_Store
 *.png
-hw-backprop*
+hw-unsup*
+build
 
