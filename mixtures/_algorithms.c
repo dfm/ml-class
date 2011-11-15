@@ -20,9 +20,9 @@ PyMODINIT_FUNC init_algorithms(void)
 static PyObject *algorithms_kmeans(PyObject *self, PyObject *args)
 {
     /* SHAPES:
-        data -> (P, D)
-        means -> (K, D)     TRANSPOSE MEANS IN PYTHON!!!!
-        rs -> (P,)
+        data  -> (P, D)
+        means -> (K, D)
+        rs    -> (P,)
      */
 
     /* parse the input tuple */
@@ -53,7 +53,6 @@ static PyObject *algorithms_kmeans(PyObject *self, PyObject *args)
     int D = (int)PyArray_DIM(data_array, 1);
     int K = (int)PyArray_DIM(means_array, 0);
 
-    /* shape: dists.shape = (P,K) */
     double *dists = (double*)malloc(K*sizeof(double));
     long   *N_rs  = (long*)malloc(K*sizeof(long));
 
@@ -120,5 +119,4 @@ static PyObject *algorithms_kmeans(PyObject *self, PyObject *args)
     Py_INCREF(Py_None);
     return Py_None;
 }
-
 

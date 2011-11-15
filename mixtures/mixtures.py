@@ -7,14 +7,11 @@ Gaussian mixture models
 
 from __future__ import division
 
-__all__ = ['MixtureModel', 'KMeansConvergenceError']
+__all__ = ['MixtureModel']
 
 import numpy as np
 
 import _algorithms
-
-class KMeansConvergenceError(Exception):
-    pass
 
 class MixtureModel(object):
     """
@@ -33,7 +30,7 @@ class MixtureModel(object):
         self._data = np.atleast_2d(data)
         self._lu   = None
 
-        self._means = data[np.random.randint(data.shape[0],size=self._K),:].T
+        self._means = data[np.random.randint(data.shape[0],size=self._K),:]
         self._cov   = [np.cov(data,rowvar=0)]*self._K
         self._as    = np.random.rand(K)
         self._as /= np.sum(self._as)
@@ -48,27 +45,26 @@ class MixtureModel(object):
 
     @property
     def means(self):
-        return self._means.T
+        return self._means
 
     # ================= #
     # K-Means Algorithm #
     # ================= #
 
     def run_kmeans(self, maxiter=200, tol=1e-8, verbose=True):
-        means = self.means
         self._kmeans_rs = np.zeros(self._data.shape[0], dtype=int)
-        _algorithms.kmeans(self._data, means, self._kmeans_rs, tol, maxiter)
-        self._means = means.T
+        _algorithms.kmeans(self._data, self._means, self._kmeans_rs, tol, maxiter)
 
     # ============ #
     # EM Algorithm #
     # ============ #
 
-    def run_em(self, maxiter=400, tol=1e-8, verbose=True):
+    def run_em(self, maxiter=400, tol=1e-4, verbose=True):
         """
         Fit the given data using EM
 
         """
+        self._means = self._means.T
         L = None
         for i in xrange(maxiter):
             newL = self._expectation()
@@ -76,7 +72,7 @@ class MixtureModel(object):
             if L is None:
                 L = newL
             else:
-                dL = np.abs(newL-L)
+                dL = np.abs((newL-L)/L)
                 if dL < tol:
                     break
                 L = newL
@@ -85,8 +81,9 @@ class MixtureModel(object):
                 print "EM converged after %d iterations"%(i)
         else:
             print "Warning: EM didn't converge after %d iterations"%(i)
+        self._means = self._means.T
 
-    def _multi_gauss(self, k, X):
+    def _log_multi_gauss(self, k, X):
         # X.shape == (P,D)
         # self._means.shape == (D,K)
         # self.cov[k].shape == (D,D)
@@ -100,7 +97,7 @@ class MixtureModel(object):
 
         p = -0.5*np.sum(X1 * X2, axis=1)
 
-        return 1/np.sqrt( (2*np.pi)**(X.shape[1]) * det )*np.exp(p)
+        return -0.5 * np.log( (2*np.pi)**(X.shape[1]) * det ) + p
 
     def _expectation(self):
         # self._rs.shape == (P,K)
@@ -114,25 +111,25 @@ class MixtureModel(object):
         self._means = np.sum(self._rs[:,None,:] * self._data[:,:,None], axis=0)
         self._means /= Nk[None,:]
         self._cov = []
-        Cprior = np.cov(data,rowvar=0)
         for k in range(self._K):
             # D.shape == (P,D)
             D = self._data - self._means[None,:,k]
-            # FIXME: bogus crap
-            self._cov.append(\
-                    (np.dot(D.T, self._rs[:,k,None]*D) \
-                    + Cprior)/(Nk[k]+1) \
-                    )
-            # self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k])
+            self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k])
         self._as = Nk/self._data.shape[0]
 
     def _calc_prob(self, x):
         x = np.atleast_2d(x)
-        rs = np.concatenate([self._as[k]*self._multi_gauss(k, x)
+
+        # WTF? Agreed... there must be a nicer way to do this...
+        logrs = np.concatenate([np.log(self._as[k]) + self._log_multi_gauss(k, x)
                 for k in range(self._K)]).reshape((-1, self._K), order='F')
-        L = np.log(np.sum(rs, axis=1))
-        rs /= np.sum(rs, axis=1)[:,None]
-        return L, rs
+
+        # here lies some ghetto log-sum-exp...
+        # nothing like a little bit of overflow to make your day better!
+        a = np.max(logrs, axis=1)
+        L = a + np.log(np.sum(np.exp(logrs-a[:,None]), axis=1))
+        logrs -= L[:,None]
+        return L, np.exp(logrs)
 
     def lnprob(self, x):
         return self._calc_prob(x)[0]
@@ -168,9 +165,9 @@ if __name__ == '__main__':
     kmeans.run_kmeans()
     kmeans.run_em()
 
-    samples = kmeans.sample(50000)
+    #samples = kmeans.sample(50000)
 
-    pl.plot(samples[:,0], samples[:,1], '.k', zorder=-1, ms=2)
+    #pl.plot(samples[:,0], samples[:,1], '.k', zorder=-1, ms=2)
     pl.scatter(data[:,0], data[:,1], marker='o',
             c=[tuple(kmeans._rs[i,:]) for i in range(data.shape[0])],
             s=8., edgecolor='none')
@@ -181,7 +178,7 @@ if __name__ == '__main__':
         theta = np.degrees(np.arctan2(U[1,0], U[0,0]))
         ellipsePlot = Ellipse(xy=[x,y], width=2*np.sqrt(S[0]),
             height=2*np.sqrt(S[1]), angle=theta,
-            facecolor='none', edgecolor='w',lw=2)
+            facecolor='none', edgecolor='k',lw=2)
         ax = pl.gca()
         ax.add_patch(ellipsePlot)
 

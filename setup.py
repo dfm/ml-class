@@ -3,6 +3,7 @@
 
 from distutils.core import setup
 from distutils.extension import Extension
+import numpy.linalg
 import numpy.distutils.misc_util
 
 tile_ext = Extension('dataset._tile_helper',
