@@ -11,6 +11,8 @@ __all__ = ['MixtureModel', 'KMeansConvergenceError']
 
 import numpy as np
 
+import _algorithms
+
 class KMeansConvergenceError(Exception):
     pass
 
@@ -53,6 +55,12 @@ class MixtureModel(object):
     # ================= #
 
     def run_kmeans(self, maxiter=200, tol=1e-8, verbose=True):
+        means = self.means
+        self._kmeans_rs = np.zeros(self._data.shape[0], dtype=int)
+        _algorithms.kmeans(self._data, means, self._kmeans_rs, tol, maxiter)
+        self._means = means.T
+
+    def run_kmeans_slow(self, maxiter=200, tol=1e-8, verbose=True):
         """
         Fit the given data using K-means
 
@@ -63,7 +71,8 @@ class MixtureModel(object):
             if L is None:
                 L = newL
             else:
-                dL = np.abs(newL-L)
+                dL = np.abs((newL-L)/newL)
+                print dL
                 if dL < tol:
                     break
                 L = newL
@@ -76,6 +85,7 @@ class MixtureModel(object):
     def _update_kmeans(self):
         # dists.shape == (P,K)
         dists = np.sum((self._data[:,:,None] - self._means[None,:,:])**2, axis=1)
+        print dists
 
         # rs.shape == (P,K)
         rs = dists == np.min(dists,axis=1)[:,None]

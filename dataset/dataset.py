@@ -15,7 +15,7 @@ import numpy as np
 
 from PIL import Image
 
-from _tile_helper import to_tiles
+from _tile_helper import to_tiles, from_tiles
 
 class ImageDataset(object):
     def __init__(self, fn, tile_shape=(8,8)):
@@ -23,13 +23,12 @@ class ImageDataset(object):
         self.shape = img.size[::-1] # PIL uses transposed shape
         self.data  = np.array(img.getdata()).reshape(self.shape)
         tile_size = np.prod(tile_shape)
-        self.tiles = np.zeros((np.prod(self.shape)/tile_size, tile_size))
-        print self.data.shape
+        self.tiles = np.zeros((np.prod(self.shape)/tile_size, tile_size), dtype=int)
         to_tiles(self.data, self.tiles, tile_shape)
 
 if __name__ == '__main__':
     img = ImageDataset('dataset/buildings.png')
-    # import pylab as pl
-    # pl.imshow(img.tiles)
-    # pl.show()
+    import pylab as pl
+    pl.imshow(img.tiles)
+    pl.show()
 
