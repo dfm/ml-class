@@ -129,7 +129,7 @@ int solve_system(double *a, double *b, int dim_a, int dim_b)
     int *piv = (int*)malloc(dim_a * sizeof(int));
     int info;
 
-    LAPACKE_dgesv( &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info );
+    clapack_dgesv( &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info );
 
     free(piv);
 
@@ -174,7 +174,7 @@ static PyObject *algorithms_solve_system(PyObject *self, PyObject *args)
 int lu_factor(double *a, int dim, int *piv)
 {
     int info;
-    LAPACKE_dgetrf(&dim, &dim, a, &dim, piv, &info);
+    clapack_dgetrf(&dim, &dim, a, &dim, piv, &info);
     return info;
 }
 
@@ -182,7 +182,7 @@ int lu_solve(double *a, double *b, int dim_a, int dim_b, int *piv)
 {
     int info;
     char t = 'T';
-    LAPACKE_dgetrs(&t, &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info);
+    clapack_dgetrs(&t, &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info);
     return info;
 }
 
