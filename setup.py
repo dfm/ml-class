@@ -6,8 +6,6 @@ from distutils.extension import Extension
 import numpy.distutils.misc_util
 import config
 
-LAPACK_INCLUDE='/System/Library/Frameworks/vecLib.framework/Versions/A/Headers'
-
 tile_ext = Extension('dataset._tile_helper',
                 ['dataset/_tile_helper.c'])
 

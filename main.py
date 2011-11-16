@@ -34,7 +34,7 @@ def kmeans():
         for i,k in enumerate([2,4,8,64,256]):
             model = MixtureModel(k, np.array(img.tiles, dtype=np.float64))
             model.run_kmeans(tol=1e-4)
-            print model.get_entropy() * img.ntiles
+            print model.get_entropy()
             data = np.zeros(img.shape)
             from_tiles(model.means, model._kmeans_rs, data, (8,8))
 
@@ -43,8 +43,8 @@ def kmeans():
             ax.text(750, 50, 'K = %d'%k, fontsize=20, color='r',
                     horizontalalignment='right', verticalalignment='top',)
 
-            if k == 8:
-                model.run_em()
+            # if k == 8:
+            #     model.run_em()
 
         pl.savefig('results/%s.png'%fn)
 
