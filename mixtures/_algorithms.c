@@ -67,7 +67,6 @@ static PyObject *algorithms_kmeans(PyObject *self, PyObject *args)
         double L_new = 0.0, dL;
         for (p = 0; p < P; p++) {
             double min_dist = -1.0;
-            int min_k = 0;
             for (k = 0; k < K; k++) {
                 dists[k] = 0.0;
                 for (d = 0; d < D; d++) {
@@ -130,7 +129,7 @@ int solve_system(double *a, double *b, int dim_a, int dim_b)
     int *piv = (int*)malloc(dim_a * sizeof(int));
     int info;
 
-    dgesv_( &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info );
+    LAPACKE_dgesv( &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info );
 
     free(piv);
 
@@ -175,7 +174,7 @@ static PyObject *algorithms_solve_system(PyObject *self, PyObject *args)
 int lu_factor(double *a, int dim, int *piv)
 {
     int info;
-    dgetrf_(&dim, &dim, a, &dim, piv, &info);
+    LAPACKE_dgetrf(&dim, &dim, a, &dim, piv, &info);
     return info;
 }
 
@@ -183,7 +182,7 @@ int lu_solve(double *a, double *b, int dim_a, int dim_b, int *piv)
 {
     int info;
     char t = 'T';
-    dgetrs_(&t, &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info);
+    LAPACKE_dgetrs(&t, &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info);
     return info;
 }
 
@@ -271,5 +270,4 @@ static PyObject *algorithms_lu_solve(PyObject *self, PyObject *args)
     Py_INCREF(Py_None);
     return Py_None;
 }
-
 

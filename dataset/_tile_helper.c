@@ -45,7 +45,7 @@ static PyObject *tile_helper_to_tiles(PyObject *self, PyObject *args)
     long *data_out = (long*)PyArray_DATA(obj_out);
 
     /* tiles dim */
-    int n_tiles_x = dim_in_x/tile_x, n_tiles_y = dim_in_y/tile_y;
+    int n_tiles_y = dim_in_y/tile_y;
 
     /* split into tiles here */
     int xi, yi;
@@ -86,11 +86,10 @@ static PyObject *tile_helper_from_tiles(PyObject *self, PyObject *args)
     }
 
     /* array specs */
-    int P = PyArray_DIM(inds_array, 0);
     int tile_size = tile_x*tile_y;
     int dim_x = (int)PyArray_DIM(img_array, 0),
         dim_y = (int)PyArray_DIM(img_array, 1);
-    int n_tiles_x = dim_x/tile_x, n_tiles_y = dim_y/tile_y;
+    int n_tiles_y = dim_y/tile_y;
 
     /* array data pointers */
     double *means_data = (double*)PyArray_DATA(means_array);
