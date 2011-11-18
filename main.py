@@ -7,10 +7,9 @@
 
 from __future__ import division
 
-import time
-
 import numpy as np
-np.random.seed(100)
+np.random.seed(110)
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as pl
@@ -24,7 +23,7 @@ def kmeans():
     fig   = pl.figure(figsize=(10,11))
     grid = ImageGrid(fig, 111, nrows_ncols = (3, 2), axes_pad = 0.05, label_mode = 'L')
 
-    for fn in ['bird']: #['airplane', 'bird', 'boat', 'buildings']:
+    for fn in ['airplane', 'bird', 'boat', 'buildings']:
         print "Dataset: ", fn
         print "=======  ", "="*len(fn)
         img   = ImageDataset('dataset/%s.png'%fn)
@@ -33,7 +32,7 @@ def kmeans():
         grid[0].text(750, 50, 'Raw', fontsize=20, color='r',
                     horizontalalignment='right', verticalalignment='top',)
 
-        for i,k in enumerate([8]): #[2,4,8,64,256]):
+        for i,k in enumerate([2,4,8,64,256]):
             print "K =", k
             model = MixtureModel(k, np.array(img.tiles, dtype=np.float64))
             model.run_kmeans()
@@ -48,9 +47,10 @@ def kmeans():
             print
 
             if k == 8:
-                strt = time.time()
+                print "Running EM..."
                 model.run_em()
-                print time.time()-strt, "seconds"
+
+            print
 
         pl.savefig('results/%s.png'%fn)
 

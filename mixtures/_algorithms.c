@@ -307,7 +307,7 @@ double log_multi_gauss(double *x, double *mu, double *lu, int *piv, double logde
     for (i = 0; i < dim; i++)
         result += X[i]*Y[i];
     result *= -0.5;
-    result += -0.5 * dim * log( 2*M_PI ) - 0.5 * logdet;
+    result += - 0.5 * (logdet + dim*log(2*M_PI));
     free(X); free(Y);
     return result;
 }
@@ -455,7 +455,7 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
 
                 free(loggammas);
                 free(logNk);
-                /* free(lu); */
+                free(lu);
                 free(logdet);
                 free(piv);
                 Py_DECREF(data_array);
@@ -557,6 +557,9 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
         printf("EM converged after %d iterations\nFinal log(L) = %f\n", iter, L);
     else
         printf("EM didn't converge after %d iterations\n", iter);
+
+    for (k = 0; k < K; k++)
+        alphas[k] = exp(alphas[k]);
 
     /* clean up */
     free(loggammas);

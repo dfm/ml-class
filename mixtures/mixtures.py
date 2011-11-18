@@ -56,7 +56,7 @@ class MixtureModel(object):
     # K-Means Algorithm #
     # ================= #
 
-    def run_kmeans(self, maxiter=200, tol=1e-6, verbose=True):
+    def run_kmeans(self, maxiter=200, tol=1e-4, verbose=True):
         self._kmeans_rs = np.zeros(self._data.shape[0], dtype=int)
         _algorithms.kmeans(self._data, self._means, self._kmeans_rs, tol, maxiter)
 
@@ -78,7 +78,10 @@ class MixtureModel(object):
     # ============ #
 
     def run_em(self, maxiter=400, tol=1e-4, verbose=True):
-        _algorithms.em(self._data, self._means, self._cov, self._as, tol, maxiter)
+        try:
+            _algorithms.em(self._data, self._means, self._cov, self._as, tol, maxiter)
+        except AttributeError: # not compiled with LAPACK
+            self.run_em_slow(maxiter=maxiter, tol=tol, verbose=verbose)
 
     def run_em_slow(self, maxiter=400, tol=1e-4, verbose=True):
         """
@@ -89,9 +92,8 @@ class MixtureModel(object):
         L = None
         for i in xrange(maxiter):
             newL = self._expectation()
-            print newL
             if i == 0:
-                print "Initial EM likelihood:", newL
+                print "Initial log(L) =", newL
             self._maximization()
             if L is None:
                 L = newL
@@ -103,12 +105,10 @@ class MixtureModel(object):
         if i < maxiter-1:
             if verbose:
                 print "EM converged after %d iterations"%(i)
+                print "Final log(L) =", newL
         else:
             print "Warning: EM didn't converge after %d iterations"%(i)
         self._means = self._means.T
-
-        print "Final EM likelihood:", L
-        print
 
     def _log_multi_gauss(self, k, X):
         # X.shape == (P,D)
