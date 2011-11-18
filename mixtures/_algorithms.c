@@ -307,7 +307,7 @@ double log_multi_gauss(double *x, double *mu, double *lu, int *piv, double logde
     for (i = 0; i < dim; i++)
         result += X[i]*Y[i];
     result *= -0.5;
-    result += -0.5 * log( pow(2*M_PI, dim) ) - 0.5 * logdet;
+    result += -0.5 * dim * log( 2*M_PI ) - 0.5 * logdet;
     free(X); free(Y);
     return result;
 }
@@ -427,9 +427,12 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
     double *loggammas = (double*)malloc(K*P*sizeof(double));
     double *logNk     = (double*)malloc(K*sizeof(double));
 
-    double *lu     = (double*)malloc(K*D*D*sizeof(double));
+    double *lu     = cov; //(double*)malloc(K*D*D*sizeof(double)); /* I shouldn't actually need this */
     double *logdet = (double*)malloc(K*sizeof(double));
     int    *piv    = (int*)   malloc(K*D*sizeof(int));
+
+    for (k = 0; k < K; k++)
+        alphas[k] = log(alphas[k]);
 
     double L = 1.0;
     int iter;
@@ -437,8 +440,8 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
         double L_new = 0.0, dL;
 
         /* pre-factorization */
-        for (i = 0; i < K*D*D; i++)
-            lu[i] = cov[i];
+        /* for (i = 0; i < K*D*D; i++) */
+        /*     lu[i] = cov[i]; */
         for (k = 0; k < K; k++) {
             int ret = lu_factor(&lu[k*D*D], D, &piv[k*D]);
             int s;
@@ -452,7 +455,7 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
 
                 free(loggammas);
                 free(logNk);
-                free(lu);
+                /* free(lu); */
                 free(logdet);
                 free(piv);
                 Py_DECREF(data_array);
@@ -476,7 +479,7 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
                     PyErr_SetString(PyExc_RuntimeError, "couldn't generate multi-gauss");
                     free(loggammas);
                     free(logNk);
-                    free(lu);
+                    /* free(lu); */
                     free(logdet);
                     free(piv);
                     Py_DECREF(data_array);
@@ -486,11 +489,11 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
                     return NULL;
                 }
 
-                loggammas[p*K+k] = log(alphas[k]) + logNpk;
+                loggammas[p*K+k] = alphas[k] + logNpk;
                 if (k == 0)
                     logmu = loggammas[p*K+k];
                 else
-                    logmu = log_sum_exp(logmu, loggammas[p*K+k]); /* no-overflow(TM) */
+                    logmu = log_sum_exp(logmu, loggammas[p*K+k]);
             }
             for (k = 0; k < K; k++) {
                 loggammas[p*K+k] -= logmu;
@@ -502,17 +505,19 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
             L_new += logmu;
         }
 
+        if (iter == 0)
+            printf("Initial log(L) = %f\n", L_new);
+
         /* check for convergence */
         dL = fabs((L_new - L)/L);
+        L = L_new;
 
         if (iter > 5 && dL < tol)
             break;
-        else
-            L = L_new;
 
         /* Maximization step */
         for (k = 0; k < K; k++) {
-            alphas[k] = exp(logNk[k] - log(P));
+            alphas[k] = logNk[k] - log(P);
             for (d = 0; d < D; d++)
                 means[k*D+d] = 0.0;
         }
@@ -536,25 +541,27 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
                         cov[k*D*D + d*D + i] += factor
                             * (data[p*D+d] - means[k*D+d])
                             * (data[p*D+i] - means[k*D+i]);
+                        if (i == d)
+                            cov[k*D*D + d*D + i] += 1.0e-10;
                     }
                 }
             }
         }
         for (k = 0; k < K; k++)
             for (d = 0; d < D; d++)
-                for (i = d; i < D; i++)
+                for (i = d+1; i < D; i++)
                     cov[k*D*D + i*D + d] = cov[k*D*D + d*D + i];
     }
 
     if (iter < maxiter)
-        printf("EM converged after %d iterations\n", iter);
+        printf("EM converged after %d iterations\nFinal log(L) = %f\n", iter, L);
     else
         printf("EM didn't converge after %d iterations\n", iter);
 
     /* clean up */
     free(loggammas);
     free(logNk);
-    free(lu);
+    /* free(lu); */
     free(logdet);
     free(piv);
     Py_DECREF(data_array);

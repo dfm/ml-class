@@ -10,6 +10,7 @@ from __future__ import division
 import time
 
 import numpy as np
+np.random.seed(100)
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as pl
@@ -23,7 +24,7 @@ def kmeans():
     fig   = pl.figure(figsize=(10,11))
     grid = ImageGrid(fig, 111, nrows_ncols = (3, 2), axes_pad = 0.05, label_mode = 'L')
 
-    for fn in ['airplane', 'bird', 'boat', 'buildings']:
+    for fn in ['bird']: #['airplane', 'bird', 'boat', 'buildings']:
         print "Dataset: ", fn
         print "=======  ", "="*len(fn)
         img   = ImageDataset('dataset/%s.png'%fn)
@@ -46,8 +47,10 @@ def kmeans():
                     horizontalalignment='right', verticalalignment='top',)
             print
 
-            if k == 8 and fn != 'boat':
+            if k == 8:
+                strt = time.time()
                 model.run_em()
+                print time.time()-strt, "seconds"
 
         pl.savefig('results/%s.png'%fn)
 

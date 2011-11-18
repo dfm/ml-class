@@ -56,7 +56,7 @@ class MixtureModel(object):
     # K-Means Algorithm #
     # ================= #
 
-    def run_kmeans(self, maxiter=200, tol=1e-4, verbose=True):
+    def run_kmeans(self, maxiter=200, tol=1e-6, verbose=True):
         self._kmeans_rs = np.zeros(self._data.shape[0], dtype=int)
         _algorithms.kmeans(self._data, self._means, self._kmeans_rs, tol, maxiter)
 
@@ -77,7 +77,7 @@ class MixtureModel(object):
     # EM Algorithm #
     # ============ #
 
-    def run_em(self, maxiter=400, tol=1e-10, verbose=True):
+    def run_em(self, maxiter=400, tol=1e-4, verbose=True):
         _algorithms.em(self._data, self._means, self._cov, self._as, tol, maxiter)
 
     def run_em_slow(self, maxiter=400, tol=1e-4, verbose=True):
@@ -145,10 +145,9 @@ class MixtureModel(object):
         for k in range(self._K):
             # D.shape == (P,D)
             D = self._data - self._means[None,:,k]
-            if Nk[k] > 0:
-                self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k])
-            else:
-                self._cov.append(np.eye(self._means.shape[0]))
+            self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k] \
+                    + 1e-10*np.eye(self._means.shape[0])) # I'm dealing with numerical
+                                                          # noise here...
         self._as = Nk/self._data.shape[0]
 
     def _calc_prob(self, x):
