@@ -427,7 +427,7 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
     double *loggammas = (double*)malloc(K*P*sizeof(double));
     double *logNk     = (double*)malloc(K*sizeof(double));
 
-    double *lu     = cov; //(double*)malloc(K*D*D*sizeof(double)); /* I shouldn't actually need this */
+    double *lu     = (double*)malloc(K*D*D*sizeof(double));
     double *logdet = (double*)malloc(K*sizeof(double));
     int    *piv    = (int*)   malloc(K*D*sizeof(int));
 
@@ -440,8 +440,8 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
         double L_new = 0.0, dL;
 
         /* pre-factorization */
-        /* for (i = 0; i < K*D*D; i++) */
-        /*     lu[i] = cov[i]; */
+        for (i = 0; i < K*D*D; i++)
+            lu[i] = cov[i];
         for (k = 0; k < K; k++) {
             int ret = lu_factor(&lu[k*D*D], D, &piv[k*D]);
             int s;
@@ -479,7 +479,7 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
                     PyErr_SetString(PyExc_RuntimeError, "couldn't generate multi-gauss");
                     free(loggammas);
                     free(logNk);
-                    /* free(lu); */
+                    free(lu);
                     free(logdet);
                     free(piv);
                     Py_DECREF(data_array);
@@ -561,7 +561,7 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
     /* clean up */
     free(loggammas);
     free(logNk);
-    /* free(lu); */
+    free(lu);
     free(logdet);
     free(piv);
     Py_DECREF(data_array);
