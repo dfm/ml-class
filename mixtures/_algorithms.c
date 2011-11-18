@@ -1,16 +1,28 @@
 #include <Python.h>
 #include <numpy/arrayobject.h>
+
+#ifdef USE_LAPACK
 #include <clapack.h>
+#endif
 
 PyMODINIT_FUNC init_algorithms(void);
 static PyObject *algorithms_kmeans(PyObject *self, PyObject *args);
+
+#ifdef USE_LAPACK
 static PyObject *algorithms_solve_system(PyObject *self, PyObject *args);
 static PyObject *algorithms_lu_solve(PyObject *self, PyObject *args);
+static PyObject *algorithms_em(PyObject *self, PyObject *args);
+static PyObject *algorithms_log_multi_gauss(PyObject *self, PyObject *args);
+#endif
 
 static PyMethodDef module_methods[] = {
     {"kmeans", algorithms_kmeans, METH_VARARGS, "Faster K-means."},
+#ifdef USE_LAPACK
     {"solve_system", algorithms_solve_system, METH_VARARGS, "Solve a system of equations."},
     {"lu_solve", algorithms_lu_solve, METH_VARARGS, "Compute the LU factorization."},
+    {"em", algorithms_em, METH_VARARGS, "Faster EM."},
+    {"log_multi_gauss", algorithms_log_multi_gauss, METH_VARARGS, "Log-multi-Gaussian."},
+#endif
     {NULL, NULL, 0, NULL}
 };
 
@@ -73,7 +85,6 @@ static PyObject *algorithms_kmeans(PyObject *self, PyObject *args)
                     double diff = means[k*D+d] - data[p*D+d];
                     dists[k] += diff*diff;
                 }
-                // printf("%f\n",dists[ind]);
                 if (min_dist < 0 || dists[k] < min_dist) {
                     min_dist = dists[k];
                     rs[p] = k;
@@ -124,12 +135,14 @@ static PyObject *algorithms_kmeans(PyObject *self, PyObject *args)
     return Py_None;
 }
 
+#ifdef USE_LAPACK
+
 int solve_system(double *a, double *b, int dim_a, int dim_b)
 {
     int *piv = (int*)malloc(dim_a * sizeof(int));
     int info;
 
-    clapack_dgesv( &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info );
+    dgesv_( &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info );
 
     free(piv);
 
@@ -174,7 +187,7 @@ static PyObject *algorithms_solve_system(PyObject *self, PyObject *args)
 int lu_factor(double *a, int dim, int *piv)
 {
     int info;
-    clapack_dgetrf(&dim, &dim, a, &dim, piv, &info);
+    dgetrf_(&dim, &dim, a, &dim, piv, &info);
     return info;
 }
 
@@ -182,22 +195,27 @@ int lu_solve(double *a, double *b, int dim_a, int dim_b, int *piv)
 {
     int info;
     char t = 'T';
-    clapack_dgetrs(&t, &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info);
+    dgetrs_(&t, &dim_a, &dim_b, a, &dim_a, piv, b, &dim_a, &info);
     return info;
 }
 
-double lu_det(double *a, int dim, int *piv)
+double lu_slogdet(double *a, int dim, int *piv, int *s)
 {
     int i;
-    double det = 1.0;
+    double logdet = 0.0;
+    *s = 1;
 
     for (i = 0; i < dim; i++) {
+        double uii     = a[i*dim + i];
+        double abs_uii = fabs(uii);
         if (piv[i] != i+1) /* fortran style indexing */
-            det *= -1.0;
-        det *= a[i*dim + i];
+            *s *= -1;
+        if (uii < 0)
+            *s *= -1;
+        logdet += log(abs_uii);
     }
 
-    return det;
+    return logdet;
 }
 
 static PyObject *algorithms_lu_solve(PyObject *self, PyObject *args)
@@ -247,7 +265,9 @@ static PyObject *algorithms_lu_solve(PyObject *self, PyObject *args)
     }
 
     /* calculate the determinant */
-    double det = lu_det(a, dim_a, piv);
+    int s;
+    double logdet = lu_slogdet(a, dim_a, piv, &s);
+    double det = ((double)s)*exp(logdet);
 
     /* solve the system */
     ret = lu_solve(a, b, dim_a, dim_b, piv);
@@ -270,4 +290,282 @@ static PyObject *algorithms_lu_solve(PyObject *self, PyObject *args)
     Py_INCREF(Py_None);
     return Py_None;
 }
+
+double log_multi_gauss(double *x, double *mu, double *lu, int *piv, double logdet, int dim, int *info)
+{
+    int i;
+    double result = 0.0;
+    double *X = (double*)malloc(dim*sizeof(double));
+    double *Y = (double*)malloc(dim*sizeof(double));
+    for (i = 0; i < dim; i++)
+        X[i] = Y[i] = x[i]-mu[i];
+    *info = lu_solve(lu, Y, dim, 1, piv);
+
+    if (*info != 0)
+        return 0;
+
+    for (i = 0; i < dim; i++)
+        result += X[i]*Y[i];
+    result *= -0.5;
+    result += -0.5 * log( pow(2*M_PI, dim) ) - 0.5 * logdet;
+    free(X); free(Y);
+    return result;
+}
+
+static PyObject *algorithms_log_multi_gauss(PyObject *self, PyObject *args)
+{
+    int i, j;
+
+    /* parse the input tuple */
+    PyObject *a_obj, *b_obj, *c_obj;
+    if (!PyArg_ParseTuple(args, "OOO", &c_obj, &b_obj, &a_obj))
+        return NULL;
+
+    /* get numpy arrays */
+    PyObject *a_array = PyArray_FROM_OTF(a_obj, NPY_DOUBLE, NPY_INOUT_ARRAY);
+    PyObject *b_array = PyArray_FROM_OTF(b_obj, NPY_DOUBLE, NPY_INOUT_ARRAY);
+    PyObject *c_array = PyArray_FROM_OTF(c_obj, NPY_DOUBLE, NPY_INOUT_ARRAY);
+    if (a_array == NULL || b_array == NULL || c_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "input objects can't be converted to arrays.");
+        Py_XDECREF(a_array);
+        Py_XDECREF(b_array);
+        Py_XDECREF(c_array);
+        return NULL;
+    }
+
+    /* get pointers to the array data */
+    double *a = (double*)PyArray_DATA(a_array);
+    double *b = (double*)PyArray_DATA(b_array);
+    double *c = (double*)PyArray_DATA(c_array);
+
+    /* array dimensions */
+    int dim_a = (int)PyArray_DIM(a_array, 0);
+
+    /* do the LUP factorization */
+    int *piv  = (int*)malloc(dim_a * sizeof(int));
+    int ret  = lu_factor(a, dim_a, piv);
+
+    /* catch the errors */
+    if (ret != 0) {
+        if (ret > 0)
+            PyErr_SetString(PyExc_RuntimeError, "singular matrix");
+        else
+            PyErr_SetString(PyExc_RuntimeError, "illegal value");
+
+        free(piv);
+        Py_DECREF(a_array);
+        Py_DECREF(b_array);
+        return NULL;
+    }
+
+    /* calculate the determinant */
+    int s, info;
+    double logdet = lu_slogdet(a, dim_a, piv, &s);
+    double det = ((double)s)*exp(logdet);
+
+    double multi_gauss = log_multi_gauss(c, b, a, piv, logdet, dim_a, &info);
+
+    PyObject *result = Py_BuildValue("d", multi_gauss);
+
+    /* clean up */
+    free(piv);
+    Py_DECREF(a_array);
+    Py_DECREF(b_array);
+
+    Py_INCREF(result);
+    return result;
+}
+
+double log_sum_exp(double a, double b)
+{
+    if (a > b)
+        return a + log(1+exp(b-a));
+    return b + log(1+exp(a-b));
+}
+
+static PyObject *algorithms_em(PyObject *self, PyObject *args)
+{
+    /* SHAPES:
+        data  -> (P, D)
+        means -> (K, D)
+        rs    -> (P,)
+     */
+
+    /* parse the input tuple */
+    PyObject *data_obj, *means_obj, *alphas_obj, *cov_obj;
+    double tol;
+    int maxiter;
+    if (!PyArg_ParseTuple(args, "OOOOdi", &data_obj, &means_obj, &cov_obj,
+                &alphas_obj, &tol, &maxiter))
+        return NULL;
+
+    /* get numpy arrays */
+    PyObject *data_array   = PyArray_FROM_OTF(data_obj,  NPY_DOUBLE, NPY_IN_ARRAY);
+    PyObject *means_array  = PyArray_FROM_OTF(means_obj, NPY_DOUBLE, NPY_INOUT_ARRAY);
+    PyObject *alphas_array = PyArray_FROM_OTF(alphas_obj,NPY_DOUBLE, NPY_INOUT_ARRAY);
+    PyObject *cov_array    = PyArray_FROM_OTF(cov_obj,   NPY_DOUBLE, NPY_INOUT_ARRAY);
+    if (data_array == NULL || means_array == NULL || alphas_array == NULL
+            || cov_array == NULL) {
+        PyErr_SetString(PyExc_TypeError, "input objects can't be converted to arrays.");
+        Py_XDECREF(data_array);
+        Py_XDECREF(means_array);
+        Py_XDECREF(alphas_array);
+        Py_XDECREF(cov_array);
+        return NULL;
+    }
+
+    double *data   = (double*)PyArray_DATA(data_array);
+    double *means  = (double*)PyArray_DATA(means_array);
+    double *alphas = (double*)PyArray_DATA(alphas_array);
+    double *cov    = (double*)PyArray_DATA(cov_array);
+
+    int i, p, d, k;
+    int P = (int)PyArray_DIM(data_array, 0);
+    int D = (int)PyArray_DIM(data_array, 1);
+    int K = (int)PyArray_DIM(means_array, 0);
+
+    double *loggammas = (double*)malloc(K*P*sizeof(double));
+    double *logNk     = (double*)malloc(K*sizeof(double));
+
+    double *lu     = (double*)malloc(K*D*D*sizeof(double));
+    double *logdet = (double*)malloc(K*sizeof(double));
+    int    *piv    = (int*)   malloc(K*D*sizeof(int));
+
+    double L = 1.0;
+    int iter;
+    for (iter = 0; iter < maxiter; iter++) {
+        double L_new = 0.0, dL;
+
+        /* pre-factorization */
+        for (i = 0; i < K*D*D; i++)
+            lu[i] = cov[i];
+        for (k = 0; k < K; k++) {
+            int ret = lu_factor(&lu[k*D*D], D, &piv[k*D]);
+            int s;
+            logdet[k] = lu_slogdet(&lu[k*D*D], D, &piv[k*D], &s);
+
+            if (ret != 0 || s <= 0) {
+                if (ret != 0)
+                    PyErr_SetString(PyExc_RuntimeError, "couldn't factorize cov");
+                else
+                    PyErr_SetString(PyExc_RuntimeError, "cov must be positive definite");
+
+                free(loggammas);
+                free(logNk);
+                free(lu);
+                free(logdet);
+                free(piv);
+                Py_DECREF(data_array);
+                Py_DECREF(means_array);
+                Py_DECREF(alphas_array);
+                Py_DECREF(cov_array);
+                return NULL;
+            }
+        }
+
+        /* Expectation step */
+        for (p = 0; p < P; p++) {
+            double logmu = 0.0, logprob = 0.0;
+            for (k = 0; k < K; k++) {
+                int info;
+                double logNpk = log_multi_gauss(&data[p*D], &means[k*D],
+                                            &lu[k*D*D], &piv[k*D], logdet[k],
+                                            D, &info);
+
+                if (info != 0) {
+                    PyErr_SetString(PyExc_RuntimeError, "couldn't generate multi-gauss");
+                    free(loggammas);
+                    free(logNk);
+                    free(lu);
+                    free(logdet);
+                    free(piv);
+                    Py_DECREF(data_array);
+                    Py_DECREF(means_array);
+                    Py_DECREF(alphas_array);
+                    Py_DECREF(cov_array);
+                    return NULL;
+                }
+
+                loggammas[p*K+k] = log(alphas[k]) + logNpk;
+                if (k == 0)
+                    logmu = loggammas[p*K+k];
+                else
+                    logmu = log_sum_exp(logmu, loggammas[p*K+k]); /* no-overflow(TM) */
+            }
+            for (k = 0; k < K; k++) {
+                loggammas[p*K+k] -= logmu;
+                if (p == 0)
+                    logNk[k] = loggammas[p*K+k];
+                else
+                    logNk[k] = log_sum_exp(logNk[k], loggammas[p*K+k]);
+            }
+            L_new += logmu;
+        }
+
+        /* check for convergence */
+        dL = fabs((L_new - L)/L);
+
+        if (iter > 5 && dL < tol)
+            break;
+        else
+            L = L_new;
+
+        /* Maximization step */
+        for (k = 0; k < K; k++) {
+            alphas[k] = exp(logNk[k] - log(P));
+            for (d = 0; d < D; d++)
+                means[k*D+d] = 0.0;
+        }
+
+        for (p = 0; p < P; p ++) {
+            for (k = 0; k < K; k++) {
+                double factor = exp(loggammas[p*K+k] - logNk[k]);
+                for (d = 0; d < D; d++)
+                    means[k*D+d] += factor * data[p*D+d];
+            }
+        }
+
+        for (i = 0; i < K*D*D; i++)
+            cov[i] = 0.0;
+
+        for (p = 0; p < P; p ++) {
+            for (k = 0; k < K; k++) {
+                double factor = exp(loggammas[p*K+k] - logNk[k]);
+                for (d = 0; d < D; d++) {
+                    for (i = d; i < D; i++) {
+                        cov[k*D*D + d*D + i] += factor
+                            * (data[p*D+d] - means[k*D+d])
+                            * (data[p*D+i] - means[k*D+i]);
+                    }
+                }
+            }
+        }
+        for (k = 0; k < K; k++)
+            for (d = 0; d < D; d++)
+                for (i = d; i < D; i++)
+                    cov[k*D*D + i*D + d] = cov[k*D*D + d*D + i];
+    }
+
+    if (iter < maxiter)
+        printf("EM converged after %d iterations\n", iter);
+    else
+        printf("EM didn't converge after %d iterations\n", iter);
+
+    /* clean up */
+    free(loggammas);
+    free(logNk);
+    free(lu);
+    free(logdet);
+    free(piv);
+    Py_DECREF(data_array);
+    Py_DECREF(means_array);
+    Py_DECREF(alphas_array);
+    Py_DECREF(cov_array);
+
+    /* return None */
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+#endif /* USE_LAPACK */
 

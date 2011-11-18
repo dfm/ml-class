@@ -10,6 +10,7 @@ from __future__ import division
 __all__ = ['MixtureModel']
 
 import numpy as np
+import numpy.ma as ma
 
 import _algorithms
 
@@ -35,7 +36,7 @@ class MixtureModel(object):
         else:
             inds = np.random.randint(data.shape[0],size=self._K)
         self._means = data[inds,:]
-        self._cov   = [np.cov(data,rowvar=0)]*self._K
+        self._cov   = np.array([np.cov(data,rowvar=0)]*self._K)
         self._as    = np.random.rand(K)
         self._as /= np.sum(self._as)
 
@@ -55,7 +56,7 @@ class MixtureModel(object):
     # K-Means Algorithm #
     # ================= #
 
-    def run_kmeans(self, maxiter=200, tol=1e-8, verbose=True):
+    def run_kmeans(self, maxiter=200, tol=1e-4, verbose=True):
         self._kmeans_rs = np.zeros(self._data.shape[0], dtype=int)
         _algorithms.kmeans(self._data, self._means, self._kmeans_rs, tol, maxiter)
 
@@ -68,11 +69,18 @@ class MixtureModel(object):
         inds = h > 0
         return -np.sum(h[inds]*np.log2(h[inds]))
 
+    def get_max_entropy(self):
+        h = [1.0/self._K]*self._K
+        return -np.sum(h*np.log2(h))
+
     # ============ #
     # EM Algorithm #
     # ============ #
 
-    def run_em(self, maxiter=400, tol=1e-4, verbose=True):
+    def run_em(self, maxiter=400, tol=1e-10, verbose=True):
+        _algorithms.em(self._data, self._means, self._cov, self._as, tol, maxiter)
+
+    def run_em_slow(self, maxiter=400, tol=1e-4, verbose=True):
         """
         Fit the given data using EM
 
@@ -81,7 +89,9 @@ class MixtureModel(object):
         L = None
         for i in xrange(maxiter):
             newL = self._expectation()
-            print -newL
+            print newL
+            if i == 0:
+                print "Initial EM likelihood:", newL
             self._maximization()
             if L is None:
                 L = newL
@@ -97,11 +107,16 @@ class MixtureModel(object):
             print "Warning: EM didn't converge after %d iterations"%(i)
         self._means = self._means.T
 
+        print "Final EM likelihood:", L
+        print
+
     def _log_multi_gauss(self, k, X):
         # X.shape == (P,D)
         # self._means.shape == (D,K)
         # self.cov[k].shape == (D,D)
-        det = np.linalg.det(self._cov[k])
+        sgn, logdet = np.linalg.slogdet(self._cov[k])
+        if sgn <= 0:
+            return -np.inf*np.ones(X.shape[0])
 
         # X1.shape == (P,D)
         X1 = X - self._means[None,:,k]
@@ -111,7 +126,7 @@ class MixtureModel(object):
 
         p = -0.5*np.sum(X1 * X2, axis=1)
 
-        return -0.5 * np.log( (2*np.pi)**(X.shape[1]) * det ) + p
+        return -0.5 * np.log( (2*np.pi)**(X.shape[1]) ) - 0.5 * logdet + p
 
     def _expectation(self):
         # self._rs.shape == (P,K)
@@ -121,22 +136,28 @@ class MixtureModel(object):
     def _maximization(self):
         # Nk.shape == (K,)
         Nk = np.sum(self._rs, axis=0)
+        Nk = ma.masked_array(Nk, mask=Nk<=0)
         # self._means.shape == (D,K)
-        self._means = np.sum(self._rs[:,None,:] * self._data[:,:,None], axis=0)
-        self._means /= Nk[None,:]
+        self._means = ma.masked_array(np.sum(self._rs[:,None,:] \
+                * self._data[:,:,None], axis=0))
+        self._means /= Nk[None, :]
         self._cov = []
         for k in range(self._K):
             # D.shape == (P,D)
             D = self._data - self._means[None,:,k]
-            self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k])
+            if Nk[k] > 0:
+                self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k])
+            else:
+                self._cov.append(np.eye(self._means.shape[0]))
         self._as = Nk/self._data.shape[0]
 
     def _calc_prob(self, x):
         x = np.atleast_2d(x)
 
-        # WTF? Agreed... there must be a nicer way to do this...
-        logrs = np.concatenate([np.log(self._as[k]) + self._log_multi_gauss(k, x)
-                for k in range(self._K)]).reshape((-1, self._K), order='F')
+        logrs = []
+        for k in range(self._K):
+            logrs += [np.log(self._as[k]) + self._log_multi_gauss(k, x)]
+        logrs = np.concatenate(logrs).reshape((-1, self._K), order='F')
 
         # here lies some ghetto log-sum-exp...
         # nothing like a little bit of overflow to make your day better!
@@ -177,13 +198,15 @@ if __name__ == '__main__':
 
     kmeans = MixtureModel(3, data)
     kmeans.run_kmeans()
+    print kmeans.means
     kmeans.run_em()
+    print kmeans._cov
 
     #samples = kmeans.sample(50000)
 
     #pl.plot(samples[:,0], samples[:,1], '.k', zorder=-1, ms=2)
     pl.scatter(data[:,0], data[:,1], marker='o',
-            c=[tuple(kmeans._rs[i,:]) for i in range(data.shape[0])],
+            #c=[tuple(kmeans._rs[i,:]) for i in range(data.shape[0])],
             s=8., edgecolor='none')
 
     for k in range(kmeans.K):

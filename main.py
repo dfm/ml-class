@@ -25,16 +25,18 @@ def kmeans():
 
     for fn in ['airplane', 'bird', 'boat', 'buildings']:
         print "Dataset: ", fn
+        print "=======  ", "="*len(fn)
         img   = ImageDataset('dataset/%s.png'%fn)
 
         grid[0].imshow(img.data, cmap='gray')
         grid[0].text(750, 50, 'Raw', fontsize=20, color='r',
                     horizontalalignment='right', verticalalignment='top',)
 
-        for i,k in enumerate([2,4,8,64,256]):
+        for i,k in enumerate([8]): #[2,4,8,64,256]):
+            print "K =", k
             model = MixtureModel(k, np.array(img.tiles, dtype=np.float64))
-            model.run_kmeans(tol=1e-4)
-            print model.get_entropy()
+            model.run_kmeans()
+            print "S =", model.get_entropy(), "/", model.get_max_entropy()
             data = np.zeros(img.shape)
             from_tiles(model.means, model._kmeans_rs, data, (8,8))
 
@@ -42,9 +44,10 @@ def kmeans():
             ax.imshow(data, cmap='gray')
             ax.text(750, 50, 'K = %d'%k, fontsize=20, color='r',
                     horizontalalignment='right', verticalalignment='top',)
+            print
 
-            # if k == 8:
-            #     model.run_em()
+            if k == 8 and fn != 'boat':
+                model.run_em()
 
         pl.savefig('results/%s.png'%fn)
 
