@@ -13,7 +13,7 @@ libraries    = []
 if config.LAPACK is not None:
     include_dirs += [config.LAPACK]
     macros       += [('USE_LAPACK', None)]
-    libraries    += ['clapack', 'cblas']
+    libraries    += ['clapack']
 
 # C-extensions
 tile_ext = Extension('dataset._tile_helper',

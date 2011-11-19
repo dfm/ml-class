@@ -468,7 +468,7 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
 
         /* Expectation step */
         for (p = 0; p < P; p++) {
-            double logmu = 0.0, logprob = 0.0;
+            double logmu = 0.0, max_gamma = -1e10;
             for (k = 0; k < K; k++) {
                 int info;
                 double logNpk = log_multi_gauss(&data[p*D], &means[k*D],
@@ -490,11 +490,14 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
                 }
 
                 loggammas[p*K+k] = alphas[k] + logNpk;
-                if (k == 0)
-                    logmu = loggammas[p*K+k];
-                else
-                    logmu = log_sum_exp(logmu, loggammas[p*K+k]);
+                if (loggammas[p*K+k] > max_gamma)
+                    max_gamma = loggammas[p*K+k];
             }
+
+            for (k = 0; k < K; k++)
+                logmu += exp(loggammas[p*K+k] - max_gamma);
+            logmu = max_gamma + log(logmu);
+
             for (k = 0; k < K; k++) {
                 loggammas[p*K+k] -= logmu;
                 if (p == 0)

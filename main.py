@@ -7,6 +7,8 @@
 
 from __future__ import division
 
+import time
+
 import numpy as np
 np.random.seed(110)
 
@@ -48,7 +50,9 @@ def kmeans():
 
             if k == 8:
                 print "Running EM..."
+                strt = time.time()
                 model.run_em()
+                print time.time()-strt, "seconds"
 
             print
 
