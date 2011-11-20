@@ -509,7 +509,7 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
         }
 
         if (iter == 0)
-            printf("Initial log(L) = %f\n", L_new);
+            printf("Initial NLL = %f\n", -L_new);
 
         /* check for convergence */
         dL = fabs((L_new - L)/L);
@@ -544,8 +544,6 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
                         cov[k*D*D + d*D + i] += factor
                             * (data[p*D+d] - means[k*D+d])
                             * (data[p*D+i] - means[k*D+i]);
-                        if (i == d)
-                            cov[k*D*D + d*D + i] += 1.0e-10;
                     }
                 }
             }
@@ -557,7 +555,7 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
     }
 
     if (iter < maxiter)
-        printf("EM converged after %d iterations\nFinal log(L) = %f\n", iter, L);
+        printf("EM converged after %d iterations\nFinal NLL = %f\n", iter, -L);
     else
         printf("EM didn't converge after %d iterations\n", iter);
 

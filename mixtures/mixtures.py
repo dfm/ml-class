@@ -88,24 +88,25 @@ class MixtureModel(object):
         Fit the given data using EM
 
         """
-        self._means = self._means.T
+        self._means = self._means.T/256.0
+        self._data /= 256.0
         L = None
         for i in xrange(maxiter):
             newL = self._expectation()
             if i == 0:
-                print "Initial log(L) =", newL
+                print "Initial NLL =", -newL
             self._maximization()
             if L is None:
                 L = newL
             else:
                 dL = np.abs((newL-L)/L)
-                if dL < tol:
+                if i > 5 and dL < tol:
                     break
                 L = newL
         if i < maxiter-1:
             if verbose:
                 print "EM converged after %d iterations"%(i)
-                print "Final log(L) =", newL
+                print "Final NLL =", -newL
         else:
             print "Warning: EM didn't converge after %d iterations"%(i)
         self._means = self._means.T
@@ -145,9 +146,7 @@ class MixtureModel(object):
         for k in range(self._K):
             # D.shape == (P,D)
             D = self._data - self._means[None,:,k]
-            self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k] \
-                    + 1e-10*np.eye(self._means.shape[0])) # I'm dealing with numerical
-                                                          # noise here...
+            self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k])
         self._as = Nk/self._data.shape[0]
 
     def _calc_prob(self, x):
