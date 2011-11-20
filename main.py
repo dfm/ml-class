@@ -31,7 +31,7 @@ def kmeans():
             model = MixtureModel(k, np.array(img.tiles, dtype=np.float64))
             model.run_kmeans()
             print "S =", model.get_entropy(), "/", model.get_max_entropy()
-            reconstruction = img.reconstruct(model.means, model.memberships)
+            reconstruction = img.reconstruct(model.means, model.responsibilities)
 
             ax = grid[i+1]
             ax.imshow(reconstruction, cmap='gray')

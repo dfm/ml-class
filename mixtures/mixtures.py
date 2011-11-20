@@ -56,7 +56,7 @@ class MixtureModel(object):
     # ================= #
 
     @property
-    def memberships(self):
+    def responsibilities(self):
         return self._kmeans_rs
 
     def run_kmeans(self, maxiter=200, tol=1e-4, verbose=True):
