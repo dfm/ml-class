@@ -20,7 +20,7 @@ def kmeans():
     for fn in ['airplane', 'bird', 'boat', 'buildings']:
         print "Dataset: ", fn
         print "=======  ", "="*len(fn)
-        img   = ImageDataset('dataset/%s.png'%fn)
+        img   = ImageDataset('dataset/%s.dat'%fn)
 
         grid[0].imshow(img.data, cmap='gray')
         grid[0].text(750, 50, 'Raw', fontsize=20, color='r',
