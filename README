@@ -4,3 +4,29 @@
 *  Daniel Foreman-Mackey --- danfm@nyu.edu  *
 =============================================
 
+This assignment is implemented in Python with a few functions implemented as
+C-extensions for speed.
+
+Building
+--------
+
+Running "make" in the root directory should build the required C-extensions in
+place and they will be accessible from the Python interpreter in that directory.
+Alternatively, you can run
+
+    python setup.py build_ext --inplace
+
+in the same directory and get the same results.
+
+I also wrote a C-extension version of my EM algorithm but it depends on CLAPACK
+(http://www.netlib.org/clapack/) and is only slightly faster.  CLAPACK is a bit
+of a nightmare to link to (and the gains are only marginal) so it's not part of
+the default build.  If you want to check it out, edit the config.py file to have
+the path to your clapack.h file and then run "make clean; make" in the root
+directory.  This may or may not work without more messing around.
+
+Implementation
+--------------
+
+
+

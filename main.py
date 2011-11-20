@@ -1,11 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
-"""
-
-
-"""
-
-from __future__ import division
 
 import time
 
@@ -19,7 +12,6 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 
 from mixtures import MixtureModel
 from dataset import ImageDataset
-from dataset._tile_helper import from_tiles
 
 def kmeans():
     fig   = pl.figure(figsize=(10,11))
@@ -39,11 +31,10 @@ def kmeans():
             model = MixtureModel(k, np.array(img.tiles, dtype=np.float64))
             model.run_kmeans()
             print "S =", model.get_entropy(), "/", model.get_max_entropy()
-            data = np.zeros(img.shape)
-            from_tiles(model.means, model._kmeans_rs, data, (8,8))
+            reconstruction = img.reconstruct(model.means, model.memberships)
 
             ax = grid[i+1]
-            ax.imshow(data, cmap='gray')
+            ax.imshow(reconstruction, cmap='gray')
             ax.text(750, 50, 'K = %d'%k, fontsize=20, color='r',
                     horizontalalignment='right', verticalalignment='top',)
             print
@@ -51,10 +42,9 @@ def kmeans():
             if k == 8:
                 print "Running EM..."
                 strt = time.time()
-                model.run_em()
+                model.run_em(normalize=256.0)
                 print time.time()-strt, "seconds"
-
-            print
+                print
 
         pl.savefig('results/%s.png'%fn)
 

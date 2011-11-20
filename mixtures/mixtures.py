@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
 """
 Gaussian mixture models
 
@@ -56,6 +55,10 @@ class MixtureModel(object):
     # K-Means Algorithm #
     # ================= #
 
+    @property
+    def memberships(self):
+        return self._kmeans_rs
+
     def run_kmeans(self, maxiter=200, tol=1e-4, verbose=True):
         self._kmeans_rs = np.zeros(self._data.shape[0], dtype=int)
         _algorithms.kmeans(self._data, self._means, self._kmeans_rs, tol, maxiter)
@@ -77,19 +80,23 @@ class MixtureModel(object):
     # EM Algorithm #
     # ============ #
 
-    def run_em(self, maxiter=400, tol=1e-4, verbose=True):
+    def run_em(self, maxiter=400, tol=1e-4, verbose=True, normalize=None):
+        if normalize is not None:
+            self._means /= normalize
+            self._data /= normalize
+
         try:
             _algorithms.em(self._data, self._means, self._cov, self._as, tol, maxiter)
         except AttributeError: # not compiled with LAPACK
-            self.run_em_slow(maxiter=maxiter, tol=tol, verbose=verbose)
+            self.run_em_slow(maxiter=maxiter, tol=tol, verbose=verbose, normalize=normalize)
 
-    def run_em_slow(self, maxiter=400, tol=1e-4, verbose=True):
+    def run_em_slow(self, maxiter=400, tol=1e-4, verbose=True, normalize=None):
         """
         Fit the given data using EM
 
         """
-        self._means = self._means.T/256.0
-        self._data /= 256.0
+        self._means = self._means.T
+
         L = None
         for i in xrange(maxiter):
             newL = self._expectation()
@@ -109,6 +116,7 @@ class MixtureModel(object):
                 print "Final NLL =", -newL
         else:
             print "Warning: EM didn't converge after %d iterations"%(i)
+
         self._means = self._means.T
 
     def _log_multi_gauss(self, k, X):
@@ -194,22 +202,17 @@ if __name__ == '__main__':
             np.random.multivariate_normal(means[i], covariances[i], size=factor*amplitudes[i])])
     data = data[1:,:]
 
-    kmeans = MixtureModel(3, data)
-    kmeans.run_kmeans()
-    print kmeans.means
-    kmeans.run_em()
-    print kmeans._cov
+    mixture = MixtureModel(3, data)
+    mixture.run_kmeans()
+    mixture.run_em()
 
-    #samples = kmeans.sample(50000)
-
-    #pl.plot(samples[:,0], samples[:,1], '.k', zorder=-1, ms=2)
     pl.scatter(data[:,0], data[:,1], marker='o',
-            #c=[tuple(kmeans._rs[i,:]) for i in range(data.shape[0])],
+            c=[tuple(mixture._rs[i,:]) for i in range(data.shape[0])],
             s=8., edgecolor='none')
 
-    for k in range(kmeans.K):
-        x,y = kmeans.means[k][0],kmeans.means[k][1]
-        U,S,V = np.linalg.svd(kmeans._cov[k])
+    for k in range(mixture.K):
+        x,y = mixture.means[k][0],mixture.means[k][1]
+        U,S,V = np.linalg.svd(mixture._cov[k])
         theta = np.degrees(np.arctan2(U[1,0], U[0,0]))
         ellipsePlot = Ellipse(xy=[x,y], width=2*np.sqrt(S[0]),
             height=2*np.sqrt(S[1]), angle=theta,
@@ -218,6 +221,6 @@ if __name__ == '__main__':
         ax.add_patch(ellipsePlot)
 
 
-    pl.savefig('test.png')
+    pl.savefig('em-test.png')
 
 
