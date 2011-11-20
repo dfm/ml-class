@@ -73,8 +73,7 @@ class MixtureModel(object):
         return -np.sum(h[inds]*np.log2(h[inds]))
 
     def get_max_entropy(self):
-        h = [1.0/self._K]*self._K
-        return -np.sum(h*np.log2(h))
+        return -np.log2(1.0/self._K)
 
     # ============ #
     # EM Algorithm #

@@ -8,7 +8,7 @@ static PyObject *tile_helper_from_tiles(PyObject *self, PyObject *args);
 static PyMethodDef module_methods[] = {
     {"to_tiles", tile_helper_to_tiles, METH_VARARGS, "Convert to tiles."},
     {"from_tiles", tile_helper_from_tiles, METH_VARARGS,
-        "Generate an image from a set of tiles and a list of indices."},
+        "Generate an image from a set of prototypes and a list of memberships."},
     {NULL, NULL, 0, NULL}
 };
 
@@ -104,7 +104,7 @@ static PyObject *tile_helper_from_tiles(PyObject *self, PyObject *args)
             int j = (inds_data[t_x*n_tiles_y + t_y])*tile_size + n_x*tile_y + n_y;
             img_data[xi*dim_y + yi] = means_data[j];
         }
-    } /* </MAGIC> */
+    }
 
     /* clean up */
     Py_DECREF(means_array);

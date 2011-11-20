@@ -7,8 +7,8 @@
 This assignment is implemented in Python with a few functions implemented as
 C-extensions for speed.
 
-Building
---------
+Compiling
+=========
 
 Running "make" in the root directory should build the required C-extensions in
 place and they will be accessible from the Python interpreter in that directory.
@@ -25,8 +25,74 @@ the default build.  If you want to check it out, edit the config.py file to have
 the path to your clapack.h file and then run "make clean; make" in the root
 directory.  This may or may not work without more messing around.
 
+
 Implementation
---------------
+==============
+
+The code for reading in the data files and reconstructing the compressed images
+is in dataset/dataset.py and dataset/_tile_helper.c. The C code compiles into a
+C-extension that can be called from Python and it makes it so that splitting the
+images into tiles and then reconstructing the images doesn't take six weeks.
+
+The algorithms are implemented in mixtures/mixtures.py and mixtures/_algorithms.c.
+The _algorithms extension includes the code for running K-means and an optional
+EM algorithm. K-means implemented in C is 1.5 orders of magnitude faster than the
+equivalent code implemented in Python with NumPy vector operations. As discussed
+above, the EM algorithm in mixtures.py is almost as fast as the one implemented in
+_algorithms.c and it's much easier to use so I recommend only paying attention to
+that one.
+
+The required experiments are implemented in main.py and they can be run by typing
+
+    python main.py
+
+in the root directory.  This will plot the compressed images in results/*.png and
+report the number of iterations before convergence and final entropy of each
+experiment.
+
+The resulting images are stored in the results directory as .png files.
 
 
+Histogram Entropy
+=================
+
+The histogram entropy of a compressed image is returned by the get_entropy() method
+of the MixtureModel class (defined in mixtures/mixtures.py).  The maximum entropy
+of the system is returned by the get_max_entropy() method and it is calculated as
+
+    S_max = - Log2[1/K]
+
+After compression, the histogram entropies are given in the following table:
+
+       |  airplane  |  bird  |  boat  |  buildings  |  S_max
+-------+------------+--------+--------+-------------+---------
+K = 2  |    0.99    |  0.39  |  0.81  |    0.99     |    1
+    4  |    1.92    |  1.70  |  1.67  |    1.58     |    2
+    8  |    2.49    |  2.54  |  2.26  |    2.70     |    3
+   64  |    4.88    |  4.90  |  4.12  |    5.19     |    6
+  256  |    4.97    |  4.08  |  4.18  |    5.67     |    8
+
+For K=8, the number of bits needed to compress the image is
+
+    N_bits = S * N_tiles
+
+where N_tiles = 7500 for the images in this dataset.  Therefore:
+
+       |  airplane  |  bird  |  boat  |  buildings  |  S_max
+-------+------------+--------+--------+-------------+---------
+N_bits |   18450    | 19050  | 16950  |    20250    |  22500
+
+
+Expectation/Maximization
+========================
+
+The EM algorithm is implemented in the MixtureModel object in mixtures/mixtures.py.
+
+Running EM (with K = 8 initialized by K-means), give the resulting negative-log-
+likelihoods (NLL) before and after running EM:
+
+             |  airplane  |   bird   |   boat   |  buildings
+-------------+------------+----------+----------+-------------
+Initial NLL  |   1.40e6   |  8.61e5  |  1.32e6  |   1.61e6
+Final NLL    |  -1.25e6   | -1.89e6  | -1.70e6  |  -1.15e6
 
