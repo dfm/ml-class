@@ -19,10 +19,13 @@ class MixtureModel(object):
 
     P data points in D dimensions with K clusters
 
-    Shapes
-    ------
-    data -> (P, D)
-    means -> (D, K)
+    Parameters
+    ----------
+    K : int
+        The number of Gaussians to include in the mixture
+
+    data : numpy.ndarray (P, D)
+        The data matrix
 
     """
     def __init__(self, K, data, init_grid=False):
@@ -32,10 +35,7 @@ class MixtureModel(object):
 
         self._kmeans_rs = np.zeros(self._data.shape[0], dtype=int)
 
-        if init_grid:
-            inds = np.array(np.linspace(0, data.shape[0]-1, self._K), dtype=int)
-        else:
-            inds = np.random.randint(data.shape[0],size=self._K)
+        inds = np.random.randint(data.shape[0],size=self._K)
         self._means = data[inds,:]
         self._cov   = np.array([np.cov(data,rowvar=0)]*self._K)
         self._as    = np.random.rand(K)
@@ -62,6 +62,21 @@ class MixtureModel(object):
         return self._kmeans_rs
 
     def run_kmeans(self, maxiter=200, tol=1e-4, verbose=True):
+        """
+        Run the K-means algorithm
+
+        Parameters
+        ----------
+        maxiter : int, optional
+            The maximum number of iterations (default: 200)
+
+        tol : float, optional
+            The tolerance that controls convergence (default: 1e-4)
+
+        verbose : bool, optional
+            Print all the messages... (default: True)
+
+        """
         _algorithms.kmeans(self._data, self._means, self._kmeans_rs, tol, maxiter)
 
     def get_hist(self):
@@ -69,11 +84,17 @@ class MixtureModel(object):
         return h/np.sum(h)
 
     def get_entropy(self):
+        """
+        Get the histogram entropy
+        """
         h = self.get_hist()
         inds = h > 0
         return -np.sum(h[inds]*np.log2(h[inds]))
 
     def get_max_entropy(self):
+        """
+        The maximum possible value for the histogram entropy
+        """
         return -np.log2(1.0/self._K)
 
     # ============ #
@@ -81,15 +102,33 @@ class MixtureModel(object):
     # ============ #
 
     def run_em(self, maxiter=400, tol=1e-4, verbose=True, regularization=0.0):
+        """
+        Run the EM algorithm using either the Python or C implementation
+
+        Parameters
+        ----------
+        maxiter : int, optional
+            The maximum number of iterations (default: 400)
+
+        tol : float, optional
+            The tolerance that controls convergence (default: 1e-4)
+
+        verbose : bool, optional
+            Print all the messages... (default: True)
+
+        regularization : float, optional
+            Add this value on the diagonal of the covariances to avoid singular
+            matrices (defualt: 0.0).
+
+        """
         try:
             _algorithms.em(self._data, self._means, self._cov, self._as, tol, maxiter, regularization)
         except AttributeError: # not compiled with LAPACK
-            self.run_em_slow(maxiter=maxiter, tol=tol, verbose=verbose, regularization=regularization)
+            self._run_em_slow(maxiter=maxiter, tol=tol, verbose=verbose, regularization=regularization)
 
-    def run_em_slow(self, maxiter=400, tol=1e-4, verbose=True, regularization=0.0):
+    def _run_em_slow(self, maxiter=400, tol=1e-4, verbose=True, regularization=0.0):
         """
-        Fit the given data using EM
-
+        Run the pure Python implementation of the EM algorithm
         """
         self._means = self._means.T
 
@@ -171,12 +210,6 @@ class MixtureModel(object):
 
     def lnprob(self, x):
         return self._calc_prob(x)[0]
-
-    def sample(self,N):
-        samples = np.vstack(
-                [np.random.multivariate_normal(self.means[k], self._cov[k],
-                    size=int(self._as[k]*(N+1))) for k in range(self._K)])
-        return samples[:N,:]
 
 if __name__ == '__main__':
     import matplotlib
