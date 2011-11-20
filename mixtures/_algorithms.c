@@ -393,10 +393,10 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
 
     /* parse the input tuple */
     PyObject *data_obj, *means_obj, *alphas_obj, *cov_obj;
-    double tol;
+    double tol, regularization;
     int maxiter;
-    if (!PyArg_ParseTuple(args, "OOOOdi", &data_obj, &means_obj, &cov_obj,
-                &alphas_obj, &tol, &maxiter))
+    if (!PyArg_ParseTuple(args, "OOOOdid", &data_obj, &means_obj, &cov_obj,
+                &alphas_obj, &tol, &maxiter, &regularization))
         return NULL;
 
     /* get numpy arrays */
@@ -548,10 +548,13 @@ static PyObject *algorithms_em(PyObject *self, PyObject *args)
                 }
             }
         }
-        for (k = 0; k < K; k++)
-            for (d = 0; d < D; d++)
+        for (k = 0; k < K; k++) {
+            for (d = 0; d < D; d++) {
+                cov[k*D*D + d*(D+1)] += regularization;
                 for (i = d+1; i < D; i++)
                     cov[k*D*D + i*D + d] = cov[k*D*D + d*D + i];
+            }
+        }
     }
 
     if (iter < maxiter)

@@ -93,6 +93,6 @@ likelihoods (NLL) before and after running EM:
 
              |  airplane  |   bird   |   boat   |  buildings
 -------------+------------+----------+----------+-------------
-Initial NLL  |   1.40e6   |  8.61e5  |  1.32e6  |   1.61e6
-Final NLL    |  -1.25e6   | -1.89e6  | -1.70e6  |  -1.15e6
+Initial NLL  |   1.64e6   |  1.10e6  |  1.56e6  |   1.85e6
+Final NLL    |   1.42e6   |  7.71e5  |  9.54e5  |   1.51e6
 

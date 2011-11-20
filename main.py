@@ -42,7 +42,7 @@ def kmeans():
             if k == 8:
                 print "Running EM..."
                 strt = time.time()
-                model.run_em(normalize=256.0)
+                model.run_em(regularization=1e-10)
                 print time.time()-strt, "seconds"
                 print
 

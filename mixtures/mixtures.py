@@ -30,6 +30,8 @@ class MixtureModel(object):
         self._data = np.atleast_2d(data)
         self._lu   = None
 
+        self._kmeans_rs = np.zeros(self._data.shape[0], dtype=int)
+
         if init_grid:
             inds = np.array(np.linspace(0, data.shape[0]-1, self._K), dtype=int)
         else:
@@ -60,7 +62,6 @@ class MixtureModel(object):
         return self._kmeans_rs
 
     def run_kmeans(self, maxiter=200, tol=1e-4, verbose=True):
-        self._kmeans_rs = np.zeros(self._data.shape[0], dtype=int)
         _algorithms.kmeans(self._data, self._means, self._kmeans_rs, tol, maxiter)
 
     def get_hist(self):
@@ -79,17 +80,13 @@ class MixtureModel(object):
     # EM Algorithm #
     # ============ #
 
-    def run_em(self, maxiter=400, tol=1e-4, verbose=True, normalize=None):
-        if normalize is not None:
-            self._means /= normalize
-            self._data /= normalize
-
+    def run_em(self, maxiter=400, tol=1e-4, verbose=True, regularization=0.0):
         try:
-            _algorithms.em(self._data, self._means, self._cov, self._as, tol, maxiter)
+            _algorithms.em(self._data, self._means, self._cov, self._as, tol, maxiter, regularization)
         except AttributeError: # not compiled with LAPACK
-            self.run_em_slow(maxiter=maxiter, tol=tol, verbose=verbose, normalize=normalize)
+            self.run_em_slow(maxiter=maxiter, tol=tol, verbose=verbose, regularization=regularization)
 
-    def run_em_slow(self, maxiter=400, tol=1e-4, verbose=True, normalize=None):
+    def run_em_slow(self, maxiter=400, tol=1e-4, verbose=True, regularization=0.0):
         """
         Fit the given data using EM
 
@@ -101,7 +98,7 @@ class MixtureModel(object):
             newL = self._expectation()
             if i == 0:
                 print "Initial NLL =", -newL
-            self._maximization()
+            self._maximization(regularization)
             if L is None:
                 L = newL
             else:
@@ -141,7 +138,7 @@ class MixtureModel(object):
         L, self._rs = self._calc_prob(self._data)
         return np.sum(L, axis=0)
 
-    def _maximization(self):
+    def _maximization(self, regularization):
         # Nk.shape == (K,)
         Nk = np.sum(self._rs, axis=0)
         Nk = ma.masked_array(Nk, mask=Nk<=0)
@@ -153,7 +150,8 @@ class MixtureModel(object):
         for k in range(self._K):
             # D.shape == (P,D)
             D = self._data - self._means[None,:,k]
-            self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k])
+            self._cov.append(np.dot(D.T, self._rs[:,k,None]*D)/Nk[k]
+                    +regularization*np.eye(self._means.shape[0]))
         self._as = Nk/self._data.shape[0]
 
     def _calc_prob(self, x):
